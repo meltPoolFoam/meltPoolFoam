@@ -6,4 +6,7 @@
 cleanCase
 rm -rf 0/{alpha.metal,polyMesh,uniform,T} A.*
 rm -rf rayTracing
-
+rm -rf horiz*
+rm -rf *.pdf
+rm -rf *.py
+rm -rf *_csv
