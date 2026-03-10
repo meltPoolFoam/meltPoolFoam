@@ -45,14 +45,15 @@ internalField   #codeStream
         const IOdictionary& d = static_cast<const IOdictionary&>(dict);
         const fvMesh& mesh = refCast<const fvMesh>(d.db());
 
+        #define METAL_TRANSPORT_PROPERTIES(constant) (d.db().lookupObject<IOdictionary>("transportProperties").subDict("metal").get<scalar>(#constant))
         #define METAL_PROPERTIES(constant) (d.db().lookupObject<IOdictionary>("thermalProperties").subDict("metal").get<scalar>(#constant))
         #define LIQUID_PROPERTIES(constant) Polynomial<2>(d.db().lookupObject<IOdictionary>("thermalProperties").subDict("metal").subDict("liquid").lookup(#constant)).value(0)
         #define SOLID_PROPERTIES(constant) Polynomial<2>(d.db().lookupObject<IOdictionary>("thermalProperties").subDict("metal").subDict("solid").lookup(#constant)).value(0)
 
 
         /*Prepare constats from thermalProperties*/
-		const scalar rho_S = METAL_PROPERTIES(rhoSolid);
-	 	const scalar rho_L = METAL_PROPERTIES(rhoLiquid);
+		const scalar rho_S = METAL_TRANSPORT_PROPERTIES(rhoSolid);
+	 	const scalar rho_L = METAL_TRANSPORT_PROPERTIES(rho);
 	 	const scalar Cp_S = SOLID_PROPERTIES(CpCoeffs);
 	 	const scalar Cp_L = LIQUID_PROPERTIES(CpCoeffs);
 	 	const scalar k_S = SOLID_PROPERTIES(kappaCoeffs);
