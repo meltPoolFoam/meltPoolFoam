@@ -47,11 +47,11 @@ runTimeModifiable yes;
 
 adjustTimeStep  no;
 
-maxCo           0.25;
-maxAlphaCo      0.2;
-maxDeltaTemp    1500;
+maxCo           0.1;
+maxAlphaCo      0.1;
+maxDeltaTemp    200;
 
-maxDeltaT       1;
+maxDeltaT       1e-6;
 
 writeAllFields yes;
 
