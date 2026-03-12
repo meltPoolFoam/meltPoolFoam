@@ -1,37 +1,42 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  dev                                   |
-|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|  \\    /   O peration     | Version:  2.2.2                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
     version     2.0;
     format      ascii;
-    class       volScalarField;
-    object      alpha.metal;
+    class       dictionary;
+    object      topoSetDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-dimensions      [0 0 0 0 0 0 0];
 
-internalField   uniform 0;
 
-boundaryField
-{
-    top
+actions
+(
     {
-        type            inletOutlet;
-        inletValue      uniform 0;
-        value           uniform 0;
+        name    c0;
+        type    cellSet;
+        action  new;
+        source boxToCell;
+	box (-400e-6 -200e-6 -400e-6) (400e-6 200e-6 200e-6);
     }
 
-    "bottom|leftRight|frontBack"
     {
-        type            zeroGradient;
+        name    c1;
+        type    cellSet;
+        action  new;
+        source boxToCell;
+	box (-200e-6 -200e-6 -300e-6) (200e-6 200e-6 200e-6);
+
+
     }
 
-}
+);
 
 // ************************************************************************* //
+

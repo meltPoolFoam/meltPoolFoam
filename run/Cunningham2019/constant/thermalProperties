@@ -16,31 +16,32 @@ FoamFile
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 // Sources:
-// K. C. Mills, Recommended Values of Thermophysical Properties for Selected Commercial Alloys, 2002
-//
+// Zenz C, Buttazzoni M, Florian T, Crespo Armijos KE, Gómez Vázquez R, Liedl G, et al. A compressible multiphase mass-of-fluid model for the simulation of \
+// laser-based manufacturing processes. Comput Fluids. 2024
+// Yang Z, Bauereiß A, Markl M, Körner C. Modeling laser beam absorption of metal alloys at high temperatures for selective laser melting. Adv Energy Mater 2021
 
 metal
 {
-    molWeight       47.86; // for Ti
+    molWeight       46.77; // for Ti 47.86
 
-    Tmelting        1923; // Mills Ti64
-    Tboiling        3558; // Brangers, Brook pure Ti
+    Tmelting        1903; // (T_l + T_s)/2 // 1923; Mills
+    Tboiling        3315; // 3558; // Brangers, Brook pure Ti
     Tcritical       4500; // maximum temperature in Clausius-Clapeyron equation
 
-    Hfusion         2.86e5; // Mills Ti64
-    Hvapour         9.82e6; // Check...now from Zenz
+    Hfusion         2.90e5; // 2.86e5; // Mills Ti64
+    Hvapour         9.82e6; //
 
 
     solid
     {
-        kappaCoeffs (2.1 1.44e-2);   // Mills Ti64
+        kappaCoeffs (-0.249 1.44e-2);   // (2.1 1.44e-2);   // Mills Ti64
         CpCoeffs    (560 9.3e-2);     // Mills Ti64 with phase transform
     }
 
     liquid
     {
-        kappaCoeffs (-6.6 1.83e-2);     // Boivineau
-        CpCoeffs    (830 0);            // Mills Ti64
+        kappaCoeffs (-5.24 1.77e-2);     // (-6.6 1.83e-2);     // Boivineau
+        CpCoeffs    (1126 0);            // (830 0);            // Mills Ti64
     }
 }
 
@@ -48,7 +49,7 @@ gas
 {
     molWeight       39.95; // for Argon
     kappaCoeffs     (2.1527e-2 2.67e-5);
-    CpCoeffs        (830 0);
+    CpCoeffs        (1126 0);
 }
 
 sigmoid         erf; // tanh or cut

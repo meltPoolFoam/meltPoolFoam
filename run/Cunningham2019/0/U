@@ -27,21 +27,8 @@ boundaryField
         value           $internalField;
     }
 
-    bottom
+    "bottom|leftRight|frontBack"
     {
-        type            fixedValue;
-        value           uniform (0 0 0);
-    }
-
-    leftRight
-    {
-        type            fixedValue;
-        value           uniform (0 0 0);
-    }
-
-    frontBack
-    {
-
         type            fixedValue;
         value           uniform (0 0 0);
     }

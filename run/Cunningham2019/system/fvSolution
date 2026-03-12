@@ -41,9 +41,9 @@ solvers
         solver          GAMG;
         smoother        DIC;
         cacheAgglomeration no;
-        tolerance       1e-12;
+        tolerance       1e-13;
         relTol          0.001;
-	maxIter       100;
+	    maxIter       100;
     }
 
     p_rghFinal
