@@ -27,7 +27,7 @@ boundaryField
         p0              uniform 0;
     }
 
-    bottom
+    "bottom|leftRight|frontBack"
     {
         type            fixedFluxPressure;
         value           uniform 0;

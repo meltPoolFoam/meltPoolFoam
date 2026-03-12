@@ -17,23 +17,11 @@ FoamFile
 
 dimensions      [0 0 0 1 0 0 0];
 
-internalField   uniform 293;
+internalField   uniform 300;
 
 boundaryField
 {
-    top
-    {
-        type            inletOutlet;
-        inletValue      $internalField;
-    }
-
-    bottom
-    {
-        type            inletOutlet;
-        inletValue      $internalField;
-    }
-
-    leftRight
+    "top|bottom|leftRight"
     {
         type            inletOutlet;
         inletValue      $internalField;
