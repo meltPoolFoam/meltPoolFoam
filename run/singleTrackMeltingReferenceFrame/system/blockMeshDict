@@ -22,7 +22,6 @@ ymin -1.;
 ymax 1.;
 zmin -1.5;
 zmax 0.7;
-cells 30;
 
 vertices
 (
