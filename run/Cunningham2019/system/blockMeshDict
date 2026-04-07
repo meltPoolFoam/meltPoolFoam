@@ -37,7 +37,7 @@ vertices
 );
 
 // Refinment settings
-d_fine 5;
+d_fine 6.25;
 d_coarse #eval "4.0*$d_fine";
 N_x #eval "($xmax - $xmin)/$d_coarse";
 N_y #eval "($ymax - $ymin)/$d_coarse";

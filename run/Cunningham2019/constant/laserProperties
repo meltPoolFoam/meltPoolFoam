@@ -25,10 +25,10 @@ power_
     scale       1;
 }
 
-radius          47.5e-6; // 70.0e-6
+radius          70e-6; // 47.5e-6
 velocity        ( 0.0 0 0 );
 coordStart      ( 0 0 1e-4 );
-timeStop        0.7e-3;
+timeStop        2.0e-3; // 0.7e-3
 
 beam
 {
@@ -52,7 +52,7 @@ source
 
     rayTracingModel
     {
-        nRays           300;
+        nRays           1500;
         RcutByR         0.99;
         writeOBJ        true;
         useSubCellData  true;
