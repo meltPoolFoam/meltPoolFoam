@@ -85,9 +85,6 @@ jobs:
         shell: bash
 
     steps:
-      # actions/checkout falls back to a tarball download (no submodule support)
-      # if it cannot find git >= 2.18 on PATH. Make sure git is present even if
-      # the base image's apt install missed it.
       - name: Ensure git is installed
         run: |
           if ! command -v git >/dev/null 2>&1; then
@@ -104,14 +101,20 @@ jobs:
 
       - name: Show toolchain
         run: |
+          # The OpenFOAM bashrc uses shell-function tricks that trip GitHub's
+          # default `set -eo pipefail`. Disable errexit just for the source.
+          set +e
           source /usr/lib/openfoam/openfoam2406/etc/bashrc
+          set -e
           echo "WM_PROJECT_DIR = $WM_PROJECT_DIR"
           echo "WM_OPTIONS     = $WM_OPTIONS"
           gcc --version
 
       - name: Build with Allwmake
         run: |
+          set +e
           source /usr/lib/openfoam/openfoam2406/etc/bashrc
+          set -e
           chmod +x ./Allwmake
           ./Allwmake -j$(nproc) 2>&1 | tee build.log
           # Allwmake does not propagate wmake failures as a non-zero exit,
