@@ -23,9 +23,9 @@ startTime       0.0;
 
 stopAt          endTime;
 
-endTime         0.8e-3;
+endTime         2.2e-3;
 
-deltaT          1.0e-7;
+deltaT          1.0e-8;
 
 writeControl    adjustableRunTime;  // use timeStep for debug
 
@@ -45,13 +45,13 @@ timePrecision   6;
 
 runTimeModifiable yes;
 
-adjustTimeStep  yes;
+adjustTimeStep  no;
 
-maxCo           0.08;
-maxAlphaCo      0.08;
-maxDeltaTemp    1050;
+maxCo           0.1;
+maxAlphaCo      0.1;
+maxDeltaTemp    400;
 
-maxDeltaT       1.0e-6;
+maxDeltaT       5e-8;
 
 writeAllFields yes;
 

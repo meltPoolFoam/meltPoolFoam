@@ -43,7 +43,7 @@ divSchemes
 
 laplacianSchemes
 {
-    default         Gauss linear limited 1;
+    default         Gauss linear limited 0.7;
 }
 
 interpolationSchemes
@@ -70,7 +70,7 @@ interpolationSchemes
 
 snGradSchemes
 {
-    default         limited 1;
+    default         limited 0.7;
 }
 
 // ************************************************************************* //

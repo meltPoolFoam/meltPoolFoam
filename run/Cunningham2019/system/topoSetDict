@@ -31,7 +31,7 @@ actions
         type    cellSet;
         action  new;
         source boxToCell;
-	box (-200e-6 -200e-6 -300e-6) (200e-6 200e-6 200e-6);
+	box (-250e-6 -200e-6 -300e-6) (250e-6 200e-6 200e-6);
 
 
     }
