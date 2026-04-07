@@ -24,6 +24,9 @@ set -e
 # USER CONFIGURATION
 # ============================================================
 MESH_SIZES=(12.5 6.25 5)
+DELTAT_VALUES=(2.0e-8 1.0e-8 8.0e-9)
+MAXDELTAT_VALUES=(1.0e-7 5.0e-8 4.0e-8)
+
 SCRIPTS_DIR="$HOME/scripts/paraview_scripts"
 OPENFOAM_MODULE="openfoam/v2406"
 PARAVIEW_MODULE="paraview/5.13.3-osmesa"
@@ -110,7 +113,10 @@ get_nodes_and_tasks() {
 # ============================================================
 echo "Setting up cases..."
 
-for mesh_um in "${MESH_SIZES[@]}"; do
+for idx in "${!MESH_SIZES[@]}"; do
+    mesh_um="${MESH_SIZES[$idx]}"
+    deltaT_value="${DELTAT_VALUES[$idx]}"
+    maxDeltaT_value="${MAXDELTAT_VALUES[$idx]}"
     case_dir="${mesh_um}um${BEAM_TAG}"
     nprocs=$(get_nprocs "$mesh_um")
     decomp_n=$(get_decomp_n "$nprocs")
@@ -129,6 +135,11 @@ for mesh_um in "${MESH_SIZES[@]}"; do
     sed -i "s/n[[:space:]]\+(.*)/n               ${decomp_n};/" \
         "${case_dir}/system/decomposeParDict"
 
+    sed -i -E "s|^deltaT[[:space:]]+[^;]+;|deltaT          ${deltaT_value};|" \
+        "${case_dir}/system/controlDict"
+    sed -i -E "s|^maxDeltaT[[:space:]]+[^;]+;|maxDeltaT       ${maxDeltaT_value};|" \
+        "${case_dir}/system/controlDict"
+
     if [ "$PATCH_BEAM" -eq 1 ]; then
         # constant/laserProperties: radius and timeStop
         sed -i -E "s|^radius[[:space:]]+[^/;]+;|radius          ${BEAM_RADIUS};|" \
@@ -138,9 +149,9 @@ for mesh_um in "${MESH_SIZES[@]}"; do
         # system/controlDict: endTime
         sed -i -E "s|^endTime[[:space:]]+[^;]+;|endTime         ${BEAM_ENDTIME};|" \
             "${case_dir}/system/controlDict"
-        echo "  Setup: ${case_dir} | d_fine=${d_fine_value} | nprocs=${nprocs} | decomp=${decomp_n} | radius=${BEAM_RADIUS} timeStop=${BEAM_TIMESTOP} endTime=${BEAM_ENDTIME}"
+        echo "  Setup: ${case_dir} | d_fine=${d_fine_value} | dt=${deltaT_value} maxdt=${maxDeltaT_value} | nprocs=${nprocs} | decomp=${decomp_n} | radius=${BEAM_RADIUS} timeStop=${BEAM_TIMESTOP} endTime=${BEAM_ENDTIME}"
     else
-        echo "  Setup: ${case_dir} | d_fine=${d_fine_value} | nprocs=${nprocs} | decomp=${decomp_n}"
+        echo "  Setup: ${case_dir} | d_fine=${d_fine_value} | dt=${deltaT_value} maxdt=${maxDeltaT_value} | nprocs=${nprocs} | decomp=${decomp_n}"
     fi
 done
 

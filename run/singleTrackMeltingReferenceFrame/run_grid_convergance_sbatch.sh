@@ -19,6 +19,9 @@ set -e
 # USER CONFIGURATION
 # ============================================================
 MESH_SIZES=(50 25 20 15 12.5 10)
+DELTAT_VALUES=(5.0e-7 2.5e-7 2.0e-7 1.5e-7 1e-7 1e-7)
+MAXDELTAT_VALUES=(2e-6 1.2e-6 1e-6 8e-7 5e-7 5e-7)
+
 SCRIPTS_DIR="$HOME/scripts/paraview_scripts"
 OPENFOAM_MODULE="openfoam/v2406"
 PARAVIEW_MODULE="paraview/5.13.3-osmesa"
@@ -74,7 +77,10 @@ get_nodes_and_tasks() {
 # ============================================================
 echo "Setting up cases..."
 
-for mesh_um in "${MESH_SIZES[@]}"; do
+for idx in "${!MESH_SIZES[@]}"; do
+    mesh_um="${MESH_SIZES[$idx]}"
+    deltaT_value="${DELTAT_VALUES[$idx]}"
+    maxDeltaT_value="${MAXDELTAT_VALUES[$idx]}"
     case_dir="${mesh_um}um"
     nprocs=$(get_nprocs "$mesh_um")
     decomp_n=$(get_decomp_n "$nprocs")
@@ -93,7 +99,12 @@ for mesh_um in "${MESH_SIZES[@]}"; do
     sed -i "s/n[[:space:]]\+(.*)/n               ${decomp_n};/" \
         "${case_dir}/system/decomposeParDict"
 
-    echo "  Setup: ${case_dir} | d_h=${d_h_value} | nprocs=${nprocs} | decomp=${decomp_n}"
+    sed -i -E "s|^deltaT[[:space:]]+[^;]+;|deltaT          ${deltaT_value};|" \
+        "${case_dir}/system/controlDict"
+    sed -i -E "s|^maxDeltaT[[:space:]]+[^;]+;|maxDeltaT       ${maxDeltaT_value};|" \
+        "${case_dir}/system/controlDict"
+
+    echo "  Setup: ${case_dir} | d_h=${d_h_value} | dt=${deltaT_value} maxdt=${maxDeltaT_value} | nprocs=${nprocs} | decomp=${decomp_n}"
 done
 
 # ============================================================
