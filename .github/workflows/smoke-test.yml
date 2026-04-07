@@ -17,16 +17,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build meltPoolFoam
+      - name: Build and run Alltest
         shell: bash
         run: |
+          # OpenFOAM's etc/bashrc uses pop_var_context in a way that trips
+          # `set -e` under bash -eo pipefail, so briefly disable -e while
+          # sourcing, then re-enable it and verify the env was set.
+          set +e
           source /usr/lib/openfoam/openfoam2406/etc/bashrc
-          ./Allwmake -j
+          set -eo pipefail
+          [ -n "$WM_PROJECT_DIR" ] || { echo "OpenFOAM env not set"; exit 1; }
 
-      - name: Run Alltest (stopAt=writeNow smoke test)
-        shell: bash
-        run: |
-          source /usr/lib/openfoam/openfoam2406/etc/bashrc
+          ./Allwmake -j
           ./run/Alltest
 
       - name: Upload case logs on failure
