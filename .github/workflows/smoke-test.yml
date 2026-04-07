@@ -1,0 +1,40 @@
+name: Smoke test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  alltest:
+    runs-on: ubuntu-latest
+    container:
+      image: opencfd/openfoam-default:2406
+      options: --user root
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build meltPoolFoam
+        shell: bash
+        run: |
+          source /usr/lib/openfoam/openfoam2406/etc/bashrc
+          ./Allwmake -j
+
+      - name: Run Alltest (stopAt=writeNow smoke test)
+        shell: bash
+        run: |
+          source /usr/lib/openfoam/openfoam2406/etc/bashrc
+          ./run/Alltest
+
+      - name: Upload case logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alltest-logs
+          path: |
+            run/**/log.*
+            run/**/slurm_*.out
+          if-no-files-found: ignore
