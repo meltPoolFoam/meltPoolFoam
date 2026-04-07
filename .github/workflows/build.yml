@@ -1,0 +1,59 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  allwmake:
+    name: Allwmake (OpenFOAM v2406)
+    runs-on: ubuntu-latest
+
+    container:
+      image: opencfd/openfoam-default:2406
+      options: --user root
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Show toolchain
+        run: |
+          source /usr/lib/openfoam/openfoam2406/etc/bashrc
+          echo "WM_PROJECT_DIR = $WM_PROJECT_DIR"
+          echo "WM_OPTIONS     = $WM_OPTIONS"
+          gcc --version
+          wmake -help >/dev/null && echo "wmake OK"
+
+      - name: Build with Allwmake
+        run: |
+          source /usr/lib/openfoam/openfoam2406/etc/bashrc
+          chmod +x ./Allwmake
+          ./Allwmake -j$(nproc) 2>&1 | tee build.log
+          # Allwmake does not exit non-zero on wmake failures,
+          # so scan the log for canonical error markers.
+          if grep -E "Error|error:" build.log >/dev/null; then
+            echo "::error::Build log contains errors"
+            exit 1
+          fi
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-v2406
+          path: build.log
+          retention-days: 14
