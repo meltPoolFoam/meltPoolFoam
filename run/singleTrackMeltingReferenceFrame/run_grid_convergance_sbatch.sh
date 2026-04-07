@@ -3,8 +3,14 @@
 # SBATCH Grid Convergence Study
 # Submits each mesh size as a separate SLURM job with dependencies
 #
-# Usage: ./run_grid_convergence_sbatch.sh [power_dir]
-#   e.g., ./run_grid_convergence_sbatch.sh 120W
+# Usage: cd run/singleTrackMeltingReferenceFrame && \
+#        ./run_grid_convergance_sbatch.sh [power_dir]
+#   e.g., ./run_grid_convergance_sbatch.sh 120W
+#
+# All study artifacts (mesh-size clones, gathered results, analysis
+# output) live inside the case directory under mesh_conv_results/ so
+# they don't clutter run/. With a POWER_DIR arg they live one level
+# deeper at mesh_conv_results/<POWER_DIR>/.
 #
 
 set -e
@@ -13,22 +19,26 @@ set -e
 # USER CONFIGURATION
 # ============================================================
 MESH_SIZES=(50 25 20 15 12.5 10)
-BASE_CASE="newCases"
-PVBATCH="$HOME/paraview/ParaView-5.11.2-MPI-Linux-Python3.9-x86_64/bin/pvbatch"
 SCRIPTS_DIR="$HOME/scripts/paraview_scripts"
-WORK_DIR="$(pwd)"
+OPENFOAM_MODULE="openfoam/v2406"
+PARAVIEW_MODULE="paraview/5.13.3-osmesa"
 
-POWER_DIR="${1:-.}"  # Optional: run inside a power directory like 120W
+# Resolve paths from the script's own location so it works no matter
+# where the user invokes it from.
+CASE_DIR="$(cd "$(dirname "$0")" && pwd)"   # .../run/singleTrackMeltingReferenceFrame
+WORK_DIR="${CASE_DIR}/mesh_conv_results"     # all study artifacts live here
+
+# Items copied from the case template into each <size>um/ clone.
+CASE_TEMPLATE_ITEMS=(0 Allclean Allrun constant system)
+
+POWER_DIR="${1:-.}"  # Optional: nest under a power directory like 120W
 
 if [ "$POWER_DIR" != "." ]; then
-    mkdir -p "$POWER_DIR"
-    # Copy base case into power dir if not already there
-    if [ ! -d "${POWER_DIR}/${BASE_CASE}" ]; then
-        cp -r "$BASE_CASE" "${POWER_DIR}/"
-    fi
-    cd "$POWER_DIR"
-    WORK_DIR="$(pwd)"
+    WORK_DIR="${WORK_DIR}/${POWER_DIR}"
 fi
+
+mkdir -p "$WORK_DIR"
+cd "$WORK_DIR"
 
 get_nprocs() {
     local mesh_um=$1
@@ -70,7 +80,10 @@ for mesh_um in "${MESH_SIZES[@]}"; do
     decomp_n=$(get_decomp_n "$nprocs")
 
     if [ ! -d "$case_dir" ]; then
-        cp -r "$BASE_CASE" "$case_dir"
+        mkdir -p "$case_dir"
+        for item in "${CASE_TEMPLATE_ITEMS[@]}"; do
+            cp -r "${CASE_DIR}/${item}" "${case_dir}/"
+        done
     fi
 
     d_h_value="${mesh_um}e-3"
@@ -110,7 +123,7 @@ for mesh_um in "${MESH_SIZES[@]}"; do
 #SBATCH --error=slurm_%j.err
 
 module purge
-module load openfoam/v2406
+module load ${OPENFOAM_MODULE}
 
 cd "${WORK_DIR}/${case_dir}"
 
@@ -120,9 +133,6 @@ date
 
 ## Run the simulation
 ./Allrun -parallel
-
-## Reconstruct
-reconstructPar -fields alpha.metal > log.reconstructPar 2>&1
 
 echo "Simulation complete: ${case_dir}"
 date
@@ -149,16 +159,28 @@ cd "${WORK_DIR}/${case_dir}"
 echo "Starting post-processing: ${case_dir} (mesh = ${mesh_um} um)"
 date
 
+# --- Reconstruct alpha.metal -------------------------------------------------
+module purge
+module load ${OPENFOAM_MODULE}
+reconstructPar -fields alpha.metal > log.reconstructPar 2>&1
+
+# --- Load ParaView module and verify pvbatch ---------------------------------
+module load ${PARAVIEW_MODULE}
+if ! command -v pvbatch >/dev/null 2>&1; then
+    echo "ERROR: pvbatch not available after loading ${PARAVIEW_MODULE}" >&2
+    exit 1
+fi
+
 # Melt pool Umax
-${PVBATCH} ${SCRIPTS_DIR}/melt_pool_Umax_at_each_time_step.py \
+pvbatch ${SCRIPTS_DIR}/melt_pool_Umax_at_each_time_step.py \
     > log.pvbatch_Umax 2>&1
 
 # Melt pool height
-${PVBATCH} ${SCRIPTS_DIR}/melt_pool_height_at_each_time_step.py -r \
+pvbatch ${SCRIPTS_DIR}/melt_pool_height_at_each_time_step.py -r \
     > log.pvbatch_height 2>&1
 
 # Melt pool wasMelted depth
-${PVBATCH} ${SCRIPTS_DIR}/melt_pool_wasMelted_depth_at_each_time_step.py -d \
+pvbatch ${SCRIPTS_DIR}/melt_pool_wasMelted_depth_at_each_time_step.py -d \
     > log.pvbatch_depth 2>&1
 
 echo "Post-processing complete: ${case_dir}"
@@ -193,7 +215,7 @@ echo "Running mesh convergence analysis..."
 date
 
 module load python
-python3 mesh_convergence_analysis.py
+python3 ${CASE_DIR}/mesh_convergance_analysis.py
 
 echo "Analysis complete."
 date
