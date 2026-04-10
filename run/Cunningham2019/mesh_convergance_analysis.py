@@ -30,7 +30,7 @@ import matplotlib.pyplot as plt
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DIRECTORY_PATH = os.environ.get(
     "RESULTS_DIR",
-    os.path.join(SCRIPT_DIR, "mesh_conv_results", "results"),
+    os.path.join(SCRIPT_DIR, "_mesh_conv_results", "results"),
 )
 OUTPUT_PLOT = os.environ.get(
     "OUTPUT_PLOT",

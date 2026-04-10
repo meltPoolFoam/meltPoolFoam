@@ -6,7 +6,7 @@
 # Usage: cd run/Cunningham2019 && ./run_grid_convergance_sbatch.sh [--beam 47.5]
 #
 # Mesh-size clones, gathered results and the final PDF all live inside
-#   run/Cunningham2019/mesh_conv_results/
+#   run/Cunningham2019/_mesh_conv_results/
 # so they don't clutter run/ alongside unrelated cases.
 #
 # Beam variants:
@@ -73,7 +73,13 @@ done
 # Resolve paths from the script's own location so it works no matter
 # where the user invokes it from.
 CASE_DIR="$(cd "$(dirname "$0")" && pwd)"   # .../run/Cunningham2019
-WORK_DIR="${CASE_DIR}/mesh_conv_results"     # all study artifacts live here
+WORK_DIR="${CASE_DIR}/_mesh_conv_results"     # all study artifacts live here
+
+if [ -d "$WORK_DIR" ]; then
+    echo "ERROR: ${WORK_DIR} already exists. Remove it to re-run." >&2
+    exit 1
+fi
+
 mkdir -p "$WORK_DIR"
 cd "$WORK_DIR"
 

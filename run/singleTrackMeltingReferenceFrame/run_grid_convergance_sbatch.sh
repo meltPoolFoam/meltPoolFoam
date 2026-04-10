@@ -7,7 +7,7 @@
 #        ./run_grid_convergance_sbatch.sh
 #
 # All study artifacts (mesh-size clones, gathered results, analysis
-# output) live inside the case directory under mesh_conv_results/ so
+# output) live inside the case directory under _mesh_conv_results/ so
 # they don't clutter run/.
 #
 
@@ -28,7 +28,12 @@ PARAVIEW_MODULE="paraview/5.13.3-osmesa"
 # Resolve paths from the script's own location so it works no matter
 # where the user invokes it from.
 CASE_DIR="$(cd "$(dirname "$0")" && pwd)"   # .../run/singleTrackMeltingReferenceFrame
-WORK_DIR="${CASE_DIR}/mesh_conv_results"     # all study artifacts live here
+WORK_DIR="${CASE_DIR}/_mesh_conv_results"     # all study artifacts live here
+
+if [ -d "$WORK_DIR" ]; then
+    echo "ERROR: ${WORK_DIR} already exists. Remove it to re-run." >&2
+    exit 1
+fi
 
 # Items copied from the case template into each <size>um/ clone.
 CASE_TEMPLATE_ITEMS=(0 Allclean Allrun constant system)

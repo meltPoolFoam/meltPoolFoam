@@ -19,7 +19,7 @@ import numpy as np
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.environ.get(
     "ROOT_DIR",
-    os.path.join(SCRIPT_DIR, "mesh_conv_results"),
+    os.path.join(SCRIPT_DIR, "_mesh_conv_results"),
 )
 OUTPUT_FILE = os.environ.get(
     "OUTPUT_FILE",
