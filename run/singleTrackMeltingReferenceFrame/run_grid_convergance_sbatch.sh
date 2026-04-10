@@ -4,13 +4,11 @@
 # Submits each mesh size as a separate SLURM job with dependencies
 #
 # Usage: cd run/singleTrackMeltingReferenceFrame && \
-#        ./run_grid_convergance_sbatch.sh [power_dir]
-#   e.g., ./run_grid_convergance_sbatch.sh 120W
+#        ./run_grid_convergance_sbatch.sh
 #
 # All study artifacts (mesh-size clones, gathered results, analysis
 # output) live inside the case directory under mesh_conv_results/ so
-# they don't clutter run/. With a POWER_DIR arg they live one level
-# deeper at mesh_conv_results/<POWER_DIR>/.
+# they don't clutter run/.
 #
 
 set -e
@@ -22,7 +20,8 @@ MESH_SIZES=(50 25 20 15 12.5 10)
 DELTAT_VALUES=(5.0e-7 2.5e-7 2.0e-7 1.5e-7 1e-7 1e-7)
 MAXDELTAT_VALUES=(2e-6 1.2e-6 1e-6 8e-7 5e-7 5e-7)
 
-SCRIPTS_DIR="$HOME/scripts/paraview_scripts"
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+SCRIPTS_DIR="${REPO_ROOT}/tools/paraview_scripts"
 OPENFOAM_MODULE="openfoam/v2406"
 PARAVIEW_MODULE="paraview/5.13.3-osmesa"
 
@@ -33,12 +32,6 @@ WORK_DIR="${CASE_DIR}/mesh_conv_results"     # all study artifacts live here
 
 # Items copied from the case template into each <size>um/ clone.
 CASE_TEMPLATE_ITEMS=(0 Allclean Allrun constant system)
-
-POWER_DIR="${1:-.}"  # Optional: nest under a power directory like 120W
-
-if [ "$POWER_DIR" != "." ]; then
-    WORK_DIR="${WORK_DIR}/${POWER_DIR}"
-fi
 
 mkdir -p "$WORK_DIR"
 cd "$WORK_DIR"
@@ -114,6 +107,7 @@ echo ""
 echo "Submitting SLURM jobs..."
 
 SIM_JOB_IDS=()
+PP_JOB_IDS=()
 
 for mesh_um in "${MESH_SIZES[@]}"; do
     case_dir="${mesh_um}um"
@@ -201,6 +195,7 @@ EOFPP
     # Submit post-processing job with dependency
     PP_JOB_ID=$(sbatch --dependency=afterok:${SIM_JOB_ID} \
         "${case_dir}/slurm_postprocess.sh" | awk '{print $4}')
+    PP_JOB_IDS+=("$PP_JOB_ID")
     echo "  Submitted ${case_dir} post-processing: Job ID ${PP_JOB_ID} (depends on ${SIM_JOB_ID})"
 
 done
@@ -208,7 +203,7 @@ done
 # ============================================================
 # Submit final analysis job (depends on ALL post-processing)
 # ============================================================
-ALL_SIM_IDS=$(IFS=:; echo "${SIM_JOB_IDS[*]}")
+ALL_PP_IDS=$(IFS=:; echo "${PP_JOB_IDS[*]}")
 
 cat > slurm_analyze.sh << EOFANALYZE
 #!/bin/bash
@@ -226,14 +221,16 @@ echo "Running mesh convergence analysis..."
 date
 
 module load python
-python3 ${CASE_DIR}/mesh_convergance_analysis.py
+ROOT_DIR="${WORK_DIR}" \
+OUTPUT_FILE="${WORK_DIR}/mesh_convergence_results.csv" \
+    python3 ${CASE_DIR}/mesh_convergance_analysis.py
 
 echo "Analysis complete."
 date
 EOFANALYZE
 
 # Build dependency string for all post-processing jobs
-ANALYZE_JOB_ID=$(sbatch --dependency=afterany:${ALL_SIM_IDS} \
+ANALYZE_JOB_ID=$(sbatch --dependency=afterok:${ALL_PP_IDS} \
     slurm_analyze.sh | awk '{print $4}')
 echo ""
 echo "Submitted analysis job: Job ID ${ANALYZE_JOB_ID}"
@@ -244,6 +241,7 @@ echo "All jobs submitted. Summary:"
 echo "============================================"
 echo "Mesh sizes: ${MESH_SIZES[*]} um"
 echo "Simulation Job IDs: ${SIM_JOB_IDS[*]}"
+echo "Post-processing Job IDs: ${PP_JOB_IDS[*]}"
 echo "Analysis Job ID: ${ANALYZE_JOB_ID}"
 echo ""
 echo "Monitor with: squeue -u \$USER"

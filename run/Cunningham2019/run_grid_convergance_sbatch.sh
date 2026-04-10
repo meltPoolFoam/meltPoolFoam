@@ -27,7 +27,8 @@ MESH_SIZES=(12.5 6.25 5)
 DELTAT_VALUES=(2.0e-8 1.0e-8 8.0e-9)
 MAXDELTAT_VALUES=(1.0e-7 5.0e-8 4.0e-8)
 
-SCRIPTS_DIR="$HOME/scripts/paraview_scripts"
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+SCRIPTS_DIR="${REPO_ROOT}/tools/paraview_scripts"
 OPENFOAM_MODULE="openfoam/v2406"
 PARAVIEW_MODULE="paraview/5.13.3-osmesa"
 
@@ -162,6 +163,7 @@ echo ""
 echo "Submitting SLURM jobs..."
 
 SIM_JOB_IDS=()
+PP_JOB_IDS=()
 
 for mesh_um in "${MESH_SIZES[@]}"; do
     case_dir="${mesh_um}um${BEAM_TAG}"
@@ -245,6 +247,7 @@ EOFPP
     # Submit post-processing job with dependency
     PP_JOB_ID=$(sbatch --dependency=afterok:${SIM_JOB_ID} \
         "${case_dir}/slurm_postprocess.sh" | awk '{print $4}')
+    PP_JOB_IDS+=("$PP_JOB_ID")
     echo "  Submitted ${case_dir} post-processing: Job ID ${PP_JOB_ID} (depends on ${SIM_JOB_ID})"
 
 done
@@ -252,7 +255,7 @@ done
 # ============================================================
 # Submit final analysis job (depends on ALL post-processing)
 # ============================================================
-ALL_SIM_IDS=$(IFS=:; echo "${SIM_JOB_IDS[*]}")
+ALL_PP_IDS=$(IFS=:; echo "${PP_JOB_IDS[*]}")
 
 ANALYZE_SLURM="slurm_analyze${BEAM_TAG}.sh"
 cat > "${ANALYZE_SLURM}" << EOFANALYZE
@@ -294,7 +297,7 @@ date
 EOFANALYZE
 
 # Build dependency string for all post-processing jobs
-ANALYZE_JOB_ID=$(sbatch --dependency=afterany:${ALL_SIM_IDS} \
+ANALYZE_JOB_ID=$(sbatch --dependency=afterok:${ALL_PP_IDS} \
     "${ANALYZE_SLURM}" | awk '{print $4}')
 echo ""
 echo "Submitted analysis job: Job ID ${ANALYZE_JOB_ID}"
@@ -305,6 +308,7 @@ echo "All jobs submitted. Summary:"
 echo "============================================"
 echo "Mesh sizes: ${MESH_SIZES[*]} um"
 echo "Simulation Job IDs: ${SIM_JOB_IDS[*]}"
+echo "Post-processing Job IDs: ${PP_JOB_IDS[*]}"
 echo "Analysis Job ID: ${ANALYZE_JOB_ID}"
 echo ""
 echo "Monitor with: squeue -u \$USER"

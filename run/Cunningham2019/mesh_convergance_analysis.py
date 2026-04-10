@@ -13,7 +13,7 @@ Expected layout (created by run_grid_convergance_sbatch.sh):
     results/<mesh>um_depression_data.csv  (or *_surface_depression_data.csv)
 
 The exact filenames produced by the pvbatch scripts in
-~/scripts/paraview_scripts may differ; "depth", "width" and
+tools/paraview_scripts may differ; "depth", "width" and
 "depression" substring matches are used so the script tolerates
 small naming variations.
 """
@@ -30,7 +30,7 @@ import matplotlib.pyplot as plt
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DIRECTORY_PATH = os.environ.get(
     "RESULTS_DIR",
-    os.path.join(os.path.dirname(SCRIPT_DIR), "results"),
+    os.path.join(SCRIPT_DIR, "mesh_conv_results", "results"),
 )
 OUTPUT_PLOT = os.environ.get(
     "OUTPUT_PLOT",
