@@ -23,9 +23,9 @@ set -e
 # ============================================================
 # USER CONFIGURATION
 # ============================================================
-MESH_SIZES=(12.5 6.25 5)
-DELTAT_VALUES=(2.0e-8 1.0e-8 8.0e-9)
-MAXDELTAT_VALUES=(1.0e-7 5.0e-8 4.0e-8)
+MESH_SIZES=(25.0 12.5 10 6.25 5)
+DELTAT_VALUES=(2.0e-8 2.0e-8 2.0e-8 1.0e-8 8.0e-9)
+MAXDELTAT_VALUES=(1.0e-7 1.0e-7 1.0e-7 5.0e-8 4.0e-8)
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SCRIPTS_DIR="${REPO_ROOT}/tools/paraview_scripts"
@@ -89,7 +89,7 @@ CASE_TEMPLATE_ITEMS=(0 Allclean Allrun constant system)
 get_nprocs() {
     local mesh_um=$1
     local need_64
-    need_64=$(echo "$mesh_um <= 6.25" | bc -l)
+    need_64=$(echo "$mesh_um < 6.25" | bc -l)
     if [ "$need_64" -eq 1 ]; then
         echo 64
     else
@@ -176,7 +176,7 @@ for mesh_um in "${MESH_SIZES[@]}"; do
     nprocs=$(get_nprocs "$mesh_um")
     read -r nodes ntasks_per_node <<< "$(get_nodes_and_tasks "$nprocs")"
 
-    JOB_NAME="gc_${mesh_um}um${BEAM_TAG}"
+    JOB_NAME="Cun_gc_${mesh_um}um${BEAM_TAG}"
 
     # Create the SLURM simulation script
     cat > "${case_dir}/slurm_run.sh" << EOFSLURM
@@ -213,7 +213,7 @@ EOFSLURM
     # Create the SLURM post-processing script (depends on simulation)
     cat > "${case_dir}/slurm_postprocess.sh" << EOFPP
 #!/bin/bash
-#SBATCH --job-name=pp_${mesh_um}um${BEAM_TAG}
+#SBATCH --job-name=Cun_pp_${mesh_um}um${BEAM_TAG}
 #SBATCH --partition=amd,intel
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -266,7 +266,7 @@ ALL_PP_IDS=$(IFS=:; echo "${PP_JOB_IDS[*]}")
 ANALYZE_SLURM="slurm_analyze${BEAM_TAG}.sh"
 cat > "${ANALYZE_SLURM}" << EOFANALYZE
 #!/bin/bash
-#SBATCH --job-name=gc_analyze${BEAM_TAG}
+#SBATCH --job-name=Cun_gc_analyze${BEAM_TAG}
 #SBATCH --partition=amd,intel
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1

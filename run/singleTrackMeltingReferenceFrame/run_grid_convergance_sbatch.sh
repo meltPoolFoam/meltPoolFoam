@@ -44,7 +44,7 @@ cd "$WORK_DIR"
 get_nprocs() {
     local mesh_um=$1
     local need_64
-    need_64=$(echo "$mesh_um <= 15" | bc -l)
+    need_64=$(echo "$mesh_um <= 12.5" | bc -l)
     if [ "$need_64" -eq 1 ]; then
         echo 64
     else
@@ -119,7 +119,7 @@ for mesh_um in "${MESH_SIZES[@]}"; do
     nprocs=$(get_nprocs "$mesh_um")
     read -r nodes ntasks_per_node <<< "$(get_nodes_and_tasks "$nprocs")"
 
-    JOB_NAME="gc_${mesh_um}um"
+    JOB_NAME="SM_gc_${mesh_um}um"
 
     # Create the SLURM simulation script
     cat > "${case_dir}/slurm_run.sh" << EOFSLURM
@@ -156,7 +156,7 @@ EOFSLURM
     # Create the SLURM post-processing script (depends on simulation)
     cat > "${case_dir}/slurm_postprocess.sh" << EOFPP
 #!/bin/bash
-#SBATCH --job-name=pp_${mesh_um}um
+#SBATCH --job-name=SM_pp_${mesh_um}um
 #SBATCH --partition=amd,intel
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -212,7 +212,7 @@ ALL_PP_IDS=$(IFS=:; echo "${PP_JOB_IDS[*]}")
 
 cat > slurm_analyze.sh << EOFANALYZE
 #!/bin/bash
-#SBATCH --job-name=gc_analyze
+#SBATCH --job-name=SM_gc_analyze
 #SBATCH --partition=amd,intel
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
