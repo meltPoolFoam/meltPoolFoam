@@ -24,7 +24,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WORK_DIR="${SCRIPT_DIR}/_stefan_convergance"
 OPENFOAM_MODULE="openfoam/v2406"
 
-RESOLUTIONS=(16 32 64 128 256 512 1024)
+RESOLUTIONS=(16 32 64 128)
 
 WALLTIME="24:00:00"
 PARTITION="amd,intel"

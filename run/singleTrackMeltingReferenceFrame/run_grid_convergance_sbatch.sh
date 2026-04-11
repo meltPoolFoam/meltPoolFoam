@@ -189,8 +189,8 @@ pvbatch ${SCRIPTS_DIR}/melt_pool_Umax_at_each_time_step.py \
 pvbatch ${SCRIPTS_DIR}/melt_pool_height_at_each_time_step.py -r \
     > log.pvbatch_height 2>&1
 
-# Melt pool wasMelted depth
-pvbatch ${SCRIPTS_DIR}/melt_pool_wasMelted_depth_at_each_time_step.py -d \
+# Melt pool depth
+pvbatch ${SCRIPTS_DIR}/melt_pool_depth_at_each_time_step.py -d \
     > log.pvbatch_depth 2>&1
 
 echo "Post-processing complete: ${case_dir}"
