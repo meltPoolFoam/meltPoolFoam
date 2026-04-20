@@ -222,6 +222,7 @@ Foam::tmp<Foam::volScalarField> Foam::incompressibleGasMetalMixture::vapourPress
 {
     using constant::physicoChemical::R;
     return
+	pos(T() - thermo_.Tboiling())*
         p0*exp(thermo_.metalM()*thermo_.Hvapour()/R
        *(1/thermo_.Tboiling() - 1/min(T(), Tcritical_)));
 }
