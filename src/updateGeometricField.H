@@ -72,6 +72,8 @@ namespace Foam
                 calc(fBf[patchi][faceI], (args.boundaryField()[patchi][faceI])...);
             }
         }
+	
+	f.correctBoundaryConditions();
     }
 
 } // End namespace Foam

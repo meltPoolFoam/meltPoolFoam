@@ -84,6 +84,8 @@ namespace Foam
             }
         }
 
+	f.correctBoundaryConditions();
+
         return tres;
     }
 
