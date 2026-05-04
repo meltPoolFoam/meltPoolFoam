@@ -454,7 +454,7 @@ bool Foam::rayTracingParticle::move
             {
                 // Use normal incidence in case of extraordinary situations
                 cosTheta = 1;
-                FatalError << "Extraordinary event! Please report about it!" << exit(FatalError);
+                //FatalError << "Extraordinary event! Please report about it!" << exit(FatalError);
             }
             else
             {

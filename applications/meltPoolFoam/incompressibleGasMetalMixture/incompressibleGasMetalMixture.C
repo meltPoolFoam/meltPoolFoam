@@ -70,6 +70,7 @@ Foam::incompressibleGasMetalMixture::incompressibleGasMetalMixture
     metalDict_(subDict("metal")),
     quasiIncompressible_(metalDict_.getOrDefault("quasiIncompressible", false)),
     momentumRedistribution_(metalDict_.getOrDefault("momentumRedistribution", false)),
+    evaporationConsidered_(metalDict_.getOrDefault("evaporationConsidered", true)),
     rhoJump_(rho1_.value() - metalDict_.get<scalar>("rhoSolid")),
     initialMass_("initialMass", dimMass, 0),
     tauCorr_("tauCorr",dimTime, metalDict_.get<scalar>("tauCorr")),
@@ -186,9 +187,20 @@ void Foam::incompressibleGasMetalMixture::updateRhoM()
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 Foam::tmp<Foam::surfaceScalarField>  Foam::incompressibleGasMetalMixture::surfaceTensionForce()
 {
-    const surfaceScalarField boilMask = neg(fvc::interpolate(T(), "interpolate(T)") - thermo_.Tboiling());
+    if (evaporationConsidered_) {
+	const scalar dumpExpOrder = 2;
+	const scalar dumpInterval = 100;
 
-    return boilMask*(surfForcesPtr_->surfaceTensionForce());
+	const surfaceScalarField excedBoilTempf = fvc::interpolate(T(), "interpolate(T)") - thermo_.Tboiling();
+	const dimensionedScalar dumpTempInterval("dumpTempInterva", dimTemperature, dumpInterval);
+	const dimensionedScalar dumpConst = -dumpExpOrder/dumpTempInterval;
+
+	const surfaceScalarField boilMask =
+		    neg(excedBoilTempf) + pos0(excedBoilTempf)*exp(dumpConst*excedBoilTempf);
+	return boilMask*(surfForcesPtr_->surfaceTensionForce());
+	}
+    
+    return surfForcesPtr_->surfaceTensionForce();
 }
 
 
@@ -199,12 +211,12 @@ Foam::tmp<Foam::volVectorField> Foam::incompressibleGasMetalMixture::marangoniFo
 
     const volVectorField& gradAlphaM = gasMetalThermalProperties::gradAlphaM();
     const volVectorField& gradT = gasMetalThermalProperties::gradT();
-    const volScalarField boilMask = neg(T() - thermo_.Tboiling());
+    const volScalarField boilMeltMask = neg(T() - thermo_.Tboiling())*pos(T() - thermo_.Tmelting());
 
     // This is an alternative formula:
     //  gradT = TPrimeEnthalpy()*fvc::grad(h_) + TPrimeMetalFraction()*gradAlphaM;
 
-    return boilMask*dSigmaDT()*(gradT & I_nn)*mag(gradAlphaM);
+    return boilMeltMask*dSigmaDT()*(gradT & I_nn)*mag(gradAlphaM);
 }
 
 
@@ -221,10 +233,14 @@ Foam::tmp<Foam::volScalarField> Foam::incompressibleGasMetalMixture::vapourPress
 ) const
 {
     using constant::physicoChemical::R;
+    if (evaporationConsidered_) {
     return
-	pos(T() - thermo_.Tboiling())*
+	//max(pos(T() - thermo_.Tboiling()), 1e-6)*
         p0*exp(thermo_.metalM()*thermo_.Hvapour()/R
        *(1/thermo_.Tboiling() - 1/min(T(), Tcritical_)));
+    } else {
+    return 0*T();
+    }
 }
 
 Foam::tmp<Foam::surfaceScalarField>  Foam::incompressibleGasMetalMixture::momentumRedistributor(volScalarField& rho) const {

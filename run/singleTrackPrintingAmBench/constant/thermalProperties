@@ -1,0 +1,65 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  dev                                   |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      thermalProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Sources:
+// SS316L -- C. S. Kim. Thermophysical properties of stainless steels. Tech. rep. Argonne National Lab., Ill.(USA), 1975.
+// SS316L -- P. Pichler et al. Measurements of thermophysical properties of solid and liquid NIST SRM 316L stainless steel.
+//      Journal of Material Science 55, 4081--4093 (2020).
+// SS316L -- K. C. Mills, Recommended Values of Thermophysical Properties for Selected Commercial Alloys, 2002
+
+metal
+{
+    molWeight       40; // for 0.691Fe + 0.183Cr + 0.114Ni + 0.012Mo
+
+    Tmelting        1571; // Kim: 1700; Pichler: solidus=1675, liquidus=1708
+    Tboiling        3090; // Kim
+    Tcritical       4500; // maximum temperature in Clausius-Clapeyron equation
+
+    Hfusion         2.1e5; // Pichler
+    Hvapour         7.34e6;
+
+
+    // From Mills, 2002
+    solid
+    {
+        kappaCoeffs (5.9 1.65e-2);
+        CpCoeffs    (286 0.337);
+}
+
+    liquid
+    {
+        kappaCoeffs (4.9 1.36e-2);
+        CpCoeffs    (778 0);
+    }
+}
+
+gas
+{
+    molWeight       39.95; // for Argon
+    kappaCoeffs     (2.1527e-2 2.67e-5);
+    CpCoeffs        (520 0); // = 2.5*R/M;
+}
+
+sigmoid         erf; // tanh or cut
+
+solidificationFields
+{
+    enabled     no; // compute and write solidification(Gradient|Speed)
+    alphaTol    0.5;
+}
+
+// ************************************************************************* //

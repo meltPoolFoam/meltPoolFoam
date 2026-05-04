@@ -27,6 +27,8 @@ Application
 Description
     Set initial conditions for alpha field, which represent the powder bed on
     a substrate. Works with dynamicRefineFvMesh.
+    
+    Supports multiple powder layers with configurable Z-spacing.
 
 \*---------------------------------------------------------------------------*/
 
@@ -125,9 +127,25 @@ int main(int argc, char *argv[])
     const scalar amplitudePosition(dict.lookupOrDefault<scalar>("amplitudePosition", 0));
     const scalar latticeStep(dict.lookupOrDefault<scalar>("latticeStep", 2));
 
+    // Bed size control parameters
+    const label nParticlesX(dict.lookupOrDefault<label>("nParticlesX", 15));
+    const label nParticlesY(dict.lookupOrDefault<label>("nParticlesY", 5));
+    const label xOffset(dict.lookupOrDefault<label>("xOffset", -2));
+    const label yOffset(dict.lookupOrDefault<label>("yOffset", -2));
+
+    // *** NEW: Layer stacking parameters ***
+    const label nLayers(dict.lookupOrDefault<label>("nLayers", 1));
+    const dimensionedScalar layerSpacing("layerSpacing", dimLength, dict.lookupOrDefault<scalar>("layerSpacing", 0.0));
+
     // Dimensioned parameters
     const dimensionedScalar ballRadius("ballRadius", dict);
     const dimensionedScalar substratePosition("substratePosition", dict);
+
+    Info<< "Generating powder bed with " << nLayers << " layer(s)" << endl;
+    if (nLayers > 1)
+    {
+        Info<< "Layer spacing: " << layerSpacing.value() << " m" << endl;
+    }
 
     // Auxiliary constants
     const vector substrateNormal(0, 0, 1);
@@ -171,29 +189,41 @@ int main(int argc, char *argv[])
             exactVolumeFraction = alpha.weightedAverage(mesh.Vsc()).value();
         }
 
-        // --- Generate balls
+        // --- Generate balls for each layer
         Random random(seed);
-        for (int j = -2; j <= 2; j++)
+        
+        for (label layer = 0; layer < nLayers; layer++)
         {
-            for (int i = -2; i < 15-2; i++)
+            // Calculate Z offset for this layer
+            const scalar layerBaseZ = substratePosition.value() 
+                                    + ballRadius.value() 
+                                    + layer * (ballRadius.value() + layerSpacing.value());
+
+            Info<< "Layer " << layer << " base Z = " << layerBaseZ << " m" << endl;
+
+            for (label j = yOffset; j < yOffset + nParticlesY; j++)
             {
-                const scalar R = ballRadius.value()*(1 + amplitudeRadius*random.position(-1, 1));
-                const scalar X = (amplitudePosition*random.position(-1, 1) + latticeStep*i)*R;
-                const scalar Y = (amplitudePosition*random.position(-1, 1) + latticeStep*j)*R;
-                const scalar Z = substratePosition.value() + R;
-
-                scalarField f = -generateBall(mesh.points(), vector(X, Y, Z), R);
-                alpha += VolumeOfFluid(mesh, f);
-
-                // Evaluate the volume of ball (full or cut)
-                // TODO(olegrog): improve accuracy by adding spherical caps
-                if
-                (
-                    bounds.min().x() < X && X < bounds.max().x()
-                 && bounds.min().y() < Y && Y < bounds.max().y()
-                )
+                for (label i = xOffset; i < xOffset + nParticlesX; i++)
                 {
-                    exactVolumeFraction += 4./3*pi*pow(R, 3)/domainVolume;
+                    const scalar R = ballRadius.value()*(1 + amplitudeRadius*random.position(-1, 1));
+                    const scalar X = (amplitudePosition*random.position(-1, 1) + latticeStep*i)*R;
+                    const scalar Y = (amplitudePosition*random.position(-1, 1) + latticeStep*j)*R;
+                    
+                    // Use layer-specific Z position
+                    const scalar Z = layerBaseZ;
+
+                    scalarField f = -generateBall(mesh.points(), vector(X, Y, Z), R);
+                    alpha += VolumeOfFluid(mesh, f);
+
+                    // Evaluate the volume of ball (full or cut)
+                    if
+                    (
+                        bounds.min().x() < X && X < bounds.max().x()
+                     && bounds.min().y() < Y && Y < bounds.max().y()
+                    )
+                    {
+                        exactVolumeFraction += 4./3*pi*pow(R, 3)/domainVolume;
+                    }
                 }
             }
         }

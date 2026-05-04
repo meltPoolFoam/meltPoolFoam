@@ -1,0 +1,81 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  dev                                   |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      laserProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+power           285;
+power_
+{
+    type        sine;
+    level       113;
+    amplitude   50;
+    period      1e-4;
+    scale       1;
+}
+
+gasLayer 1.25e-4;
+angleDeg 5.0;
+angleRad #eval "$angleDeg*3.14/180.";
+
+radius          36.0e-6;
+velocity        ( 0.96 0 0 );
+coordStart      ( 0 
+		  #eval "-tan($angleRad)*$gasLayer"
+		  $gasLayer
+		);
+timeStop        0.0015;
+
+beam
+{
+    type        Gaussian; // topHat
+    direction   ( 0 
+		  #eval "tan($angleRad)" 
+		  -1
+		  );
+    waveLength  1e-6;
+}
+
+source
+{
+    type    rayTracing; // gradAlpha
+
+    gradAlphaModel
+    {
+        absorption
+        {
+            type    biconstant; // coordinateBased | constant
+            absorptivity    0.247;
+            absorptivityInSolid    0.7; // for biconstant model only
+        }
+    }
+
+    rayTracingModel
+    {
+        nRays           300;
+        RcutByR         1.4;
+        writeOBJ        true;
+        useSubCellData  true;
+
+        scattering
+        {
+            threshold   1e-5; // do not scatter if the particle energy contribution is lower
+            type        Fresnel;
+            n           2.6; // refractive index
+            k           5.4; // absorptive index
+        }
+    }
+}
+
+// ************************************************************************* //
