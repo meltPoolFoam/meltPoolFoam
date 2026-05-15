@@ -1,5 +1,16 @@
 wasMelted = Foam::max(wasMelted, liquidFraction);
 
+refinementIndicator.primitiveFieldRef() = max(alpha1 * neg(liquidFraction), liquidFraction);
+
+refinementIndicator.correctBoundaryConditions();
+//refinementIndicator.primitiveFieldRef() =
+//    max
+//    (
+//        mag(fvc::grad(alpha1))().primitiveField(),
+//        mag(fvc::grad(liquidFraction))().primitiveField()
+//    ) * pow(mesh.V(), 1.0/3.0);
+//
+//refinementIndicator.correctBoundaryConditions();
 mixture.correctPassiveFields();
 
 if (writeAllFields)

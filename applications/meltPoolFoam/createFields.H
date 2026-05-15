@@ -58,6 +58,22 @@ const dimensionedScalar& rho2 = mixture.rho2();
 }
 */
 
+// Refinement indicator (max of liquidFraction and alpha.metal grad)
+volScalarField refinementIndicator
+(
+    IOobject
+    (
+        "refinementIndicator",
+        runTime.timeName(),
+        mesh,
+        IOobject::READ_IF_PRESENT,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    dimensionedScalar()
+);
+
+
 // Melt indicator (the maximum liquid fraction in time)
 volScalarField wasMelted
 (
