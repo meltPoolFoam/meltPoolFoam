@@ -31,7 +31,7 @@ solvers
         writeSurfCells  false;
         writeIsoFaces   false;
 
-        nAlphaSmoothCurvature 3;
+        //nAlphaSmoothCurvature 3;
         nAlphaSubCycles 1;
         cAlpha          1;      // NB: cAlpha is not used by isoAdvector but must be present
     }
@@ -41,7 +41,7 @@ solvers
         solver          GAMG;
         smoother        DIC;
         cacheAgglomeration no;
-        tolerance       1e-13;
+        tolerance       1e-7;
         relTol          0.001;
 	    maxIter       100;
     }
@@ -64,8 +64,8 @@ solvers
             cacheAgglomeration no;
         }
 
-        tolerance       1e-8;   // NB: should be quite small for some rare events
-        relTol          1e-3;
+        tolerance       1e-10;   // NB: should be quite small for some rare events
+        relTol          1e-2;
         maxIter         20;
     }
 

@@ -9,8 +9,13 @@ application=$(getApplication)
 runApplication blockMesh
 touch foam.foam
 cp 0/alpha.metal.orig 0/alpha.metal
+runApplication topoSet
+mv log.topoSet log.topoSet_C0
+runApplication refineMesh -dict system/refineMeshDictC0 -overwrite 
+mv log.refineMesh log.refineMesh_C0
+runApplication topoSet
+runApplication refineMesh -dict system/refineMeshDictC1 -overwrite
 runApplication setFields
-runApplication generatePowderBed alpha.metal
 
 if [[ "$1" == "-parallel" ]]; then
     runApplication decomposePar

@@ -235,11 +235,10 @@ Foam::tmp<Foam::volScalarField> Foam::incompressibleGasMetalMixture::vapourPress
     using constant::physicoChemical::R;
     if (evaporationConsidered_) {
     return
-	//max(pos(T() - thermo_.Tboiling()), 1e-6)*
         p0*exp(thermo_.metalM()*thermo_.Hvapour()/R
        *(1/thermo_.Tboiling() - 1/min(T(), Tcritical_)));
     } else {
-    return 0*T();
+    return 0*p0*T()/Tcritical_;
     }
 }
 

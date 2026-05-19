@@ -30,7 +30,7 @@ metal
     rho             7433;       // Kim: at T = 1700
 
     quasiIncompressible false;
-    momentumRedistribution true;
+    momentumRedistribution false;
 
     rhoSolid        7433;
     betaLiquid      0;

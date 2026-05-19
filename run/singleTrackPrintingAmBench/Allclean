@@ -6,4 +6,4 @@
 cleanCase
 rm -rf 0/{alpha.metal,polyMesh,uniform} A.*
 rm -rf rayTracing
-
+rm -rf *err *out

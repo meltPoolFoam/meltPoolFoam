@@ -1,6 +1,6 @@
 wasMelted = Foam::max(wasMelted, liquidFraction);
 
-refinementIndicator.primitiveFieldRef() = max(alpha1 * neg(liquidFraction), liquidFraction);
+refinementIndicator.primitiveFieldRef() = max(alpha1 * neg0(liquidFraction), liquidFraction);
 
 refinementIndicator.correctBoundaryConditions();
 //refinementIndicator.primitiveFieldRef() =

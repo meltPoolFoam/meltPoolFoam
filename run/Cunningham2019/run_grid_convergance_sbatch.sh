@@ -23,9 +23,9 @@ set -e
 # ============================================================
 # USER CONFIGURATION
 # ============================================================
-MESH_SIZES=(25.0 12.5 10 6.25 5)
-DELTAT_VALUES=(2.0e-8 2.0e-8 2.0e-8 1.0e-8 8.0e-9)
-MAXDELTAT_VALUES=(1.0e-7 1.0e-7 1.0e-7 5.0e-8 4.0e-8)
+MESH_SIZES=(12.5 10 6.25 5)
+DELTAT_VALUES=(10.0e-8 10.0e-8 5.e-8 2.0e-8)
+MAXDELTAT_VALUES=(1.0e-7 1.0e-7 5.0e-8 4.0e-8)
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SCRIPTS_DIR="${REPO_ROOT}/tools/paraview_scripts"
@@ -109,7 +109,7 @@ get_decomp_n() {
 get_nodes_and_tasks() {
     local nprocs=$1
     if [ "$nprocs" -eq 64 ]; then
-        echo "2 32"  # 2 nodes, 32 tasks per node
+        echo "1 64"  # 2 nodes, 32 tasks per node
     else
         echo "1 32"  # 1 node, 32 tasks per node
     fi
@@ -182,7 +182,7 @@ for mesh_um in "${MESH_SIZES[@]}"; do
     cat > "${case_dir}/slurm_run.sh" << EOFSLURM
 #!/bin/bash
 #SBATCH --job-name=${JOB_NAME}
-#SBATCH --partition=amd,intel
+#SBATCH --partition=amd
 #SBATCH --nodes=${nodes}
 #SBATCH --ntasks-per-node=${ntasks_per_node}
 #SBATCH --time=48:00:00
@@ -214,7 +214,7 @@ EOFSLURM
     cat > "${case_dir}/slurm_postprocess.sh" << EOFPP
 #!/bin/bash
 #SBATCH --job-name=Cun_pp_${mesh_um}um${BEAM_TAG}
-#SBATCH --partition=amd,intel
+#SBATCH --partition=amd
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --time=04:00:00
@@ -267,7 +267,7 @@ ANALYZE_SLURM="slurm_analyze${BEAM_TAG}.sh"
 cat > "${ANALYZE_SLURM}" << EOFANALYZE
 #!/bin/bash
 #SBATCH --job-name=Cun_gc_analyze${BEAM_TAG}
-#SBATCH --partition=amd,intel
+#SBATCH --partition=amd
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --time=00:30:00

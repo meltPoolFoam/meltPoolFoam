@@ -35,7 +35,7 @@ coordStart      ( 0
 		  #eval "-tan($angleRad)*$gasLayer"
 		  $gasLayer
 		);
-timeStop        0.0015;
+timeStop        0.0020;
 
 beam
 {
@@ -63,7 +63,7 @@ source
 
     rayTracingModel
     {
-        nRays           300;
+        nRays           1000;
         RcutByR         1.4;
         writeOBJ        true;
         useSubCellData  true;
@@ -72,8 +72,8 @@ source
         {
             threshold   1e-5; // do not scatter if the particle energy contribution is lower
             type        Fresnel;
-            n           2.6; // refractive index
-            k           5.4; // absorptive index
+            n           4.16; // refractive index
+            k           4.92; // absorptive index
         }
     }
 }

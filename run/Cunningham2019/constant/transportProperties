@@ -19,12 +19,19 @@ phases (metal gas);
 
 metal
 {
-    transportModel  Newtonian;  //trueArrheniusNewtonian
-    nu              2.14e-06;   // Wunderlich: nu = 11.4e-07, mu = 4.76e-3
+    //transportModel  Newtonian;  //trueArrheniusNewtonian
+    //nu              2.14e-06;   // Wunderlich: nu = 11.4e-07, mu = 4.76e-3
+    transportModel  trueArrheniusNewtonian;
+    trueArrhenius<Newtonian>Coeffs
+    {
+        alpha       3221;
+        Talpha      1903;
+    };
+    nu   9.1e-7; //Russian work
     rho             3800;       // Mills Ti64 at 1650
 
     quasiIncompressible false;
-    momentumRedistribution true;
+    momentumRedistribution false;
 
     rhoSolid        3800;
     betaLiquid         0;
@@ -45,8 +52,8 @@ sigma
     type            temperatureDependent;
     sigma           polynomial
     (
-        (2.06                         0)
-        (-2.9e-4                      1)
+        (1.5                         0)
+        (-1.e-4                      1)
    );
 }
 

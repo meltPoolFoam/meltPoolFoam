@@ -16,9 +16,9 @@ set -e
 # ============================================================
 # USER CONFIGURATION
 # ============================================================
-MESH_SIZES=(50 25 20 15 12.5 10)
-DELTAT_VALUES=(5.0e-7 2.5e-7 2.0e-7 1.5e-7 1e-7 1e-7)
-MAXDELTAT_VALUES=(2e-6 1.2e-6 1e-6 8e-7 5e-7 5e-7)
+MESH_SIZES=(100 50 25 20 15 12.5 10)
+DELTAT_VALUES=(5.0e-7 5.0e-7 2.5e-7 2.0e-7 1.5e-7 1e-7 1e-7)
+MAXDELTAT_VALUES=(2e-6 2e-6 1.2e-6 1e-6 8e-7 5e-7 5e-7)
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SCRIPTS_DIR="${REPO_ROOT}/tools/paraview_scripts"

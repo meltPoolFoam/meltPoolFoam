@@ -23,13 +23,13 @@ startTime       0;
 
 stopAt          endTime;
 
-endTime         1.6e-3;
+endTime         2.1e-3;
 
 deltaT          1e-7;
 
 writeControl    adjustableRunTime;  // use timeStep for debug
 
-writeInterval   2.5e-6;               // use 1 for debug
+writeInterval   1e-5;               // use 1 for debug
 
 purgeWrite      0;
 
@@ -53,7 +53,7 @@ maxDeltaTemp    1000;
 
 maxDeltaT       2e-7;
 
-writeAllFields yes;
+writeAllFields  no;
 
 DebugSwitches
 {
