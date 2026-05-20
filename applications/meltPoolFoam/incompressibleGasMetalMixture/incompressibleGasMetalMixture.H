@@ -87,6 +87,9 @@ class incompressibleGasMetalMixture
 
             //- Flag to turn on momentum redistribution
             const bool momentumRedistribution_;
+            
+	    //- Flag to turn off evaporation effects
+            const bool evaporationConsidered_;
 
             //- Melting density change [kg/m^3]
             const scalar rhoJump_;

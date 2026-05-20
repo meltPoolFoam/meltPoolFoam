@@ -30,6 +30,8 @@ metal
     rho             6979;       // Kim: at T = 1700
 
     quasiIncompressible true;
+    momentumRedistribution false;
+    evaporationConsidered  false;	
 
     rhoSolid        7256;
     betaLiquid      -1.1e-4;
@@ -49,9 +51,8 @@ sigma
     type            temperatureDependent;
     sigma           polynomial
     (
-        (-0.0605                            0)
-        (12.5e-05                           1)
-        (0.0                                2)
+	(0.56  				   0)
+        (6.25e-05                          1)
    );
 }
 

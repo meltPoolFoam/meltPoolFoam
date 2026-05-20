@@ -25,8 +25,8 @@ metal
     molWeight       46.77; // for Ti 47.86
 
     Tmelting        1903; // (T_l + T_s)/2 // 1923; Mills
-    Tboiling        3315; // 3558; // Brangers, Brook pure Ti
-    Tcritical       6500; // maximum temperature in Clausius-Clapeyron equation
+    Tboiling        3560; // 3558; // Brangers, Brook pure Ti
+    Tcritical       4500; // maximum temperature in Clausius-Clapeyron equation
 
     Hfusion         2.90e5; // 2.86e5; // Mills Ti64
     Hvapour         9.82e6; //

@@ -1,5 +1,7 @@
 wasMelted = Foam::max(wasMelted, liquidFraction);
 
+refinementIndicator.primitiveFieldRef() = max(alpha1 * neg0(liquidFraction), liquidFraction);
+
 mixture.correctPassiveFields();
 
 if (writeAllFields)

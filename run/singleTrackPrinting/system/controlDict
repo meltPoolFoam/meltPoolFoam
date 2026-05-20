@@ -47,13 +47,13 @@ runTimeModifiable yes;
 
 adjustTimeStep  yes;
 
-maxCo           0.5;
-maxAlphaCo      0.4;
-maxDeltaTemp    1000;
+maxCo           0.7;
+maxAlphaCo      0.5;
+maxDeltaTemp    1500;
 
-maxDeltaT       2e-7;
+maxDeltaT       5e-7;
 
-writeAllFields yes;
+writeAllFields no;
 
 DebugSwitches
 {

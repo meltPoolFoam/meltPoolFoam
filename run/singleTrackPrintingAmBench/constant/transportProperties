@@ -1,0 +1,69 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  dev                                   |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      transportProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+phases (metal gas);
+
+metal
+{
+    //transportModel  Newtonian;
+    transportModel  trueArrheniusNewtonian;
+    trueArrhenius<Newtonian>Coeffs
+    {
+        alpha       5765;
+        Talpha      1571;
+    };
+    nu              1.1e-06;   // Kim: nu = 8.56e-07, mu = 6.42e-3
+    rho             7433;       // Kim: at T = 1700
+
+    quasiIncompressible false;
+    momentumRedistribution false;
+
+    rhoSolid        7433;
+    betaLiquid      0;
+    tauCorr             1e12;
+}
+
+gas
+{
+    transportModel  Newtonian;
+
+    nu              2.76e-4;
+    rho             2.9;
+}
+
+sigma
+{
+    type            temperatureDependent;
+    sigma           polynomial
+    (
+        (1.5                            0)
+        (12.5e-05                           1)
+        (0.0                                2)
+   );
+}
+
+
+surfaceTensionForceModel fitParaboloid;
+accelerationForceModel gravity;
+deltaFunctionModel alphaCSF;
+
+
+beta            beta            [ K^-1 ]          0.0;
+mushyCoeff      mushyCoeff      [ kg/m^3/s ]     5e+8;
+qMushyCoeff     qMushyCoeff                     1e-15;
+
+// ************************************************************************* //

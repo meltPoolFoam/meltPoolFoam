@@ -1,4 +1,3 @@
-
 #!/bin/bash
 #=============================================================================
 # run_vertical_solidification.sh
@@ -7,17 +6,17 @@
 #   ./run_vertical_solidification.sh [--sbatch | --manual]
 #
 # Description:
-#   Runs the vertical solidification OpenFOAM case in the current directory
-#   either manually (background) or via SLURM, using 16 cores and a
-#   48-hour time limit. No mesh convergence, no modifications — just runs.
+#   Copies the case into _verticalSolidification2D/ and runs it
+#   either manually (background) or via SLURM.
 #=============================================================================
 
 set -e
 
 # ========================== CONFIGURATION ==================================
 
-CASE_DIR="$(pwd)"
-NCORES=16
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+RUN_DIR="${SCRIPT_DIR}/_verticalSolidification2D"
+OPENFOAM_MODULE="openfoam/v2406"
 WALLTIME="48:00:00"
 PARTITION="amd,intel"
 JOB_NAME="vert_solid"
@@ -30,6 +29,31 @@ if [[ "$1" == "--sbatch" ]]; then
     RUN_MODE="sbatch"
 elif [[ "$1" == "--manual" ]]; then
     RUN_MODE="manual"
+fi
+
+# ========================== SETUP ==========================================
+
+# Copy the case into a run directory if it does not exist
+if [ -d "$RUN_DIR" ]; then
+    echo "ERROR: ${RUN_DIR} already exists. Remove it to re-run." >&2
+    exit 1
+fi
+
+mkdir -p "$RUN_DIR"
+for item in 0 Allclean Allrun constant system; do
+    cp -r "${SCRIPT_DIR}/${item}" "${RUN_DIR}/"
+done
+echo "Copied case to ${RUN_DIR}"
+
+CASE_DIR="$RUN_DIR"
+
+# Parse numberOfSubdomains from decomposeParDict
+NCORES=$(grep 'numberOfSubdomains' "${CASE_DIR}/system/decomposeParDict" \
+    | awk '{print $2}' | tr -d ';')
+
+if [ -z "$NCORES" ] || [ "$NCORES" -lt 1 ] 2>/dev/null; then
+    echo "ERROR: could not parse numberOfSubdomains from decomposeParDict" >&2
+    exit 1
 fi
 
 # ========================== MAIN ===========================================
@@ -53,55 +77,35 @@ if [[ "${RUN_MODE}" == "sbatch" ]]; then
 #SBATCH --job-name=${JOB_NAME}
 #SBATCH --partition=${PARTITION}
 #SBATCH --nodes=1
-#SBATCH --ntasks=${NCORES}
+#SBATCH --ntasks-per-node=${NCORES}
 #SBATCH --time=${WALLTIME}
 #SBATCH --output=${JOB_NAME}_%j.out
 #SBATCH --error=${JOB_NAME}_%j.err
 
 module purge
-module load openfoam/v2406
+module load ${OPENFOAM_MODULE}
 
-cd ${CASE_DIR}
+cd "${CASE_DIR}"
 
-## Run the vertical solidification case
+echo "Starting vertical solidification (nprocs=${NCORES})"
+date
+
 ./Allrun -parallel
+
+echo "Simulation complete."
+date
 SLURM_EOF
 
-    chmod +x "${SLURM_SCRIPT}"
-    echo "  Submitting SLURM job..."
-    sbatch "${SLURM_SCRIPT}"
-
-    echo ""
-    echo "============================================================"
-    echo " Vertical solidification job submitted to SLURM."
-    echo " Monitor with: squeue -u \$USER"
-    echo "============================================================"
+    JOB_ID=$(sbatch "${SLURM_SCRIPT}" | awk '{print $4}')
+    echo "Submitted vertical solidification: Job ID ${JOB_ID}"
+    echo "Monitor with: squeue -u \$USER"
 
 elif [[ "${RUN_MODE}" == "manual" ]]; then
 
     # ---------- Manual (local) run ----------
-    echo "  Loading OpenFOAM module..."
-
     echo "  Running ./Allrun -parallel ..."
     cd "${CASE_DIR}"
-    ./Allrun -parallel > log.Allrun 2>&1 &
-    PID=$!
-    echo "  PID: ${PID}"
-
-    echo ""
-    echo "============================================================"
-    echo " Waiting for vertical solidification to complete"
-    echo " (PID: ${PID})..."
-    echo "============================================================"
-
-    wait ${PID}
-    EXIT_CODE=$?
-
-    if [ ${EXIT_CODE} -eq 0 ]; then
-        echo "  Vertical solidification completed successfully."
-    else
-        echo "  WARNING: Simulation exited with code ${EXIT_CODE}!"
-    fi
+    ./Allrun -parallel
 
 fi
 

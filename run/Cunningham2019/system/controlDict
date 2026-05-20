@@ -25,11 +25,11 @@ stopAt          endTime;
 
 endTime         2.2e-3;
 
-deltaT          1.0e-8;
+deltaT          1.0e-9;
 
 writeControl    adjustableRunTime;  // use timeStep for debug
 
-writeInterval   1e-5;               // use 1 for debug
+writeInterval   0.5e-5;               // use 1 for debug
 
 purgeWrite      0;
 
@@ -51,9 +51,9 @@ maxCo           0.1;
 maxAlphaCo      0.1;
 maxDeltaTemp    400;
 
-maxDeltaT       5e-8;
+maxDeltaT       5.0e-8;
 
-writeAllFields yes;
+writeAllFields no;
 
 DebugSwitches
 {

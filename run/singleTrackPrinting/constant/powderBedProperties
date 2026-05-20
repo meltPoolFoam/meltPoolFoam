@@ -16,11 +16,17 @@ FoamFile
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 ballRadius          [ m ]   2e-5;
+sigmaRadius         [ m ]   0.2e-5;
 substratePosition   [ m ]   0;
 
 seed                123;
-amplitudeRadius     0.1;
-amplitudePosition   0.5;
-latticeStep         2.7;
+amplitudePosition   0.7;
+latticeStep         2.1;
+boxMin              ( -125e-6  -125e-6  0 );
+boxMax              ( 475e-6   125e-6  0 );
+
+nLayers             1;                     // Number of powder layers (1 = single layer)
+layerSpacing        2e-6;                   // [m] Additional Z-spacing between layers (0 = close-packed)
+
 
 // ************************************************************************* //

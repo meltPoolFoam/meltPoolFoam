@@ -34,7 +34,7 @@ if (pimple.momentumPredictor())
                 (
                     mixture.surfaceTensionForce()
                   + recoilPressure
-                )
+                )*mixture.momentumRedistributor(rho)
               - ghf*fvc::snGrad(rhok)
               - fvc::snGrad(p_rgh)
             )*mesh.magSf()
