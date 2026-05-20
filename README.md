@@ -26,7 +26,7 @@ The new image can be used within an intermediate container as
 
 To build solver run
 ```bash
-./Allwmake
+./Allwmake -j
 ```
 
 ## Test cases
@@ -44,7 +44,7 @@ Each case has its own `Allrun` / `Allclean`. To run one:
 
 ```bash
 cd run/singleTrackPrinting
-./Allrun
+./Allrun -parallel
 ```
 
 ## Development environment
