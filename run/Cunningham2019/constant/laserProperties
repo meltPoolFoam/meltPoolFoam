@@ -52,8 +52,8 @@ source
 
     rayTracingModel
     {
-        nRays           1500;
-        RcutByR         0.99;
+        nRays           2500;
+        RcutByR         1.0;
         writeOBJ        true;
         useSubCellData  true;
 
@@ -61,8 +61,8 @@ source
         {
             threshold   1e-5; // do not scatter if the particle energy contribution is lower
             type        Fresnel;
-            n           4.7; // refractive index
-            k           4.83; // absorptive index
+            n           3.97; // refractive index
+            k           4.58; // absorptive index
         }
     }
 }
