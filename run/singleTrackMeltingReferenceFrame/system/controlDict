@@ -51,9 +51,9 @@ maxCo           0.08;
 maxAlphaCo      0.08;
 maxDeltaTemp    1050;
 
-maxDeltaT       1.0e-5;
+maxDeltaT       1.0e-6;
 
-writeAllFields yes;
+writeAllFields no;
 
 DebugSwitches
 {

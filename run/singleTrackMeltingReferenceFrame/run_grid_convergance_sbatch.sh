@@ -3,8 +3,12 @@
 # SBATCH Grid Convergence Study
 # Submits each mesh size as a separate SLURM job with dependencies
 #
-# Usage: ./run_grid_convergence_sbatch.sh [power_dir]
-#   e.g., ./run_grid_convergence_sbatch.sh 120W
+# Usage: cd run/singleTrackMeltingReferenceFrame && \
+#        ./run_grid_convergance_sbatch.sh
+#
+# All study artifacts (mesh-size clones, gathered results, analysis
+# output) live inside the case directory under _mesh_conv_results/ so
+# they don't clutter run/.
 #
 
 set -e
@@ -12,28 +16,35 @@ set -e
 # ============================================================
 # USER CONFIGURATION
 # ============================================================
-MESH_SIZES=(50 25 20 15 12.5 10)
-BASE_CASE="newCases"
-PVBATCH="$HOME/paraview/ParaView-5.11.2-MPI-Linux-Python3.9-x86_64/bin/pvbatch"
-SCRIPTS_DIR="$HOME/scripts/paraview_scripts"
-WORK_DIR="$(pwd)"
+MESH_SIZES=(100 50 25 20 15 12.5 10)
+DELTAT_VALUES=(5.0e-7 5.0e-7 2.5e-7 2.0e-7 1.5e-7 1e-7 1e-7)
+MAXDELTAT_VALUES=(2e-6 2e-6 1.2e-6 1e-6 8e-7 5e-7 5e-7)
 
-POWER_DIR="${1:-.}"  # Optional: run inside a power directory like 120W
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+SCRIPTS_DIR="${REPO_ROOT}/tools/paraview_scripts"
+OPENFOAM_MODULE="openfoam/v2406"
+PARAVIEW_MODULE="paraview/5.13.3-osmesa"
 
-if [ "$POWER_DIR" != "." ]; then
-    mkdir -p "$POWER_DIR"
-    # Copy base case into power dir if not already there
-    if [ ! -d "${POWER_DIR}/${BASE_CASE}" ]; then
-        cp -r "$BASE_CASE" "${POWER_DIR}/"
-    fi
-    cd "$POWER_DIR"
-    WORK_DIR="$(pwd)"
+# Resolve paths from the script's own location so it works no matter
+# where the user invokes it from.
+CASE_DIR="$(cd "$(dirname "$0")" && pwd)"   # .../run/singleTrackMeltingReferenceFrame
+WORK_DIR="${CASE_DIR}/_mesh_conv_results"     # all study artifacts live here
+
+if [ -d "$WORK_DIR" ]; then
+    echo "ERROR: ${WORK_DIR} already exists. Remove it to re-run." >&2
+    exit 1
 fi
+
+# Items copied from the case template into each <size>um/ clone.
+CASE_TEMPLATE_ITEMS=(0 Allclean Allrun constant system)
+
+mkdir -p "$WORK_DIR"
+cd "$WORK_DIR"
 
 get_nprocs() {
     local mesh_um=$1
     local need_64
-    need_64=$(echo "$mesh_um <= 15" | bc -l)
+    need_64=$(echo "$mesh_um <= 12.5" | bc -l)
     if [ "$need_64" -eq 1 ]; then
         echo 64
     else
@@ -64,13 +75,19 @@ get_nodes_and_tasks() {
 # ============================================================
 echo "Setting up cases..."
 
-for mesh_um in "${MESH_SIZES[@]}"; do
+for idx in "${!MESH_SIZES[@]}"; do
+    mesh_um="${MESH_SIZES[$idx]}"
+    deltaT_value="${DELTAT_VALUES[$idx]}"
+    maxDeltaT_value="${MAXDELTAT_VALUES[$idx]}"
     case_dir="${mesh_um}um"
     nprocs=$(get_nprocs "$mesh_um")
     decomp_n=$(get_decomp_n "$nprocs")
 
     if [ ! -d "$case_dir" ]; then
-        cp -r "$BASE_CASE" "$case_dir"
+        mkdir -p "$case_dir"
+        for item in "${CASE_TEMPLATE_ITEMS[@]}"; do
+            cp -r "${CASE_DIR}/${item}" "${case_dir}/"
+        done
     fi
 
     d_h_value="${mesh_um}e-3"
@@ -80,7 +97,12 @@ for mesh_um in "${MESH_SIZES[@]}"; do
     sed -i "s/n[[:space:]]\+(.*)/n               ${decomp_n};/" \
         "${case_dir}/system/decomposeParDict"
 
-    echo "  Setup: ${case_dir} | d_h=${d_h_value} | nprocs=${nprocs} | decomp=${decomp_n}"
+    sed -i -E "s|^deltaT[[:space:]]+[^;]+;|deltaT          ${deltaT_value};|" \
+        "${case_dir}/system/controlDict"
+    sed -i -E "s|^maxDeltaT[[:space:]]+[^;]+;|maxDeltaT       ${maxDeltaT_value};|" \
+        "${case_dir}/system/controlDict"
+
+    echo "  Setup: ${case_dir} | d_h=${d_h_value} | dt=${deltaT_value} maxdt=${maxDeltaT_value} | nprocs=${nprocs} | decomp=${decomp_n}"
 done
 
 # ============================================================
@@ -90,13 +112,14 @@ echo ""
 echo "Submitting SLURM jobs..."
 
 SIM_JOB_IDS=()
+PP_JOB_IDS=()
 
 for mesh_um in "${MESH_SIZES[@]}"; do
     case_dir="${mesh_um}um"
     nprocs=$(get_nprocs "$mesh_um")
     read -r nodes ntasks_per_node <<< "$(get_nodes_and_tasks "$nprocs")"
 
-    JOB_NAME="gc_${mesh_um}um"
+    JOB_NAME="SM_gc_${mesh_um}um"
 
     # Create the SLURM simulation script
     cat > "${case_dir}/slurm_run.sh" << EOFSLURM
@@ -110,7 +133,7 @@ for mesh_um in "${MESH_SIZES[@]}"; do
 #SBATCH --error=slurm_%j.err
 
 module purge
-module load openfoam/v2406
+module load ${OPENFOAM_MODULE}
 
 cd "${WORK_DIR}/${case_dir}"
 
@@ -120,9 +143,6 @@ date
 
 ## Run the simulation
 ./Allrun -parallel
-
-## Reconstruct
-reconstructPar -fields alpha.metal > log.reconstructPar 2>&1
 
 echo "Simulation complete: ${case_dir}"
 date
@@ -136,7 +156,7 @@ EOFSLURM
     # Create the SLURM post-processing script (depends on simulation)
     cat > "${case_dir}/slurm_postprocess.sh" << EOFPP
 #!/bin/bash
-#SBATCH --job-name=pp_${mesh_um}um
+#SBATCH --job-name=SM_pp_${mesh_um}um
 #SBATCH --partition=amd,intel
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -149,16 +169,28 @@ cd "${WORK_DIR}/${case_dir}"
 echo "Starting post-processing: ${case_dir} (mesh = ${mesh_um} um)"
 date
 
+# --- Reconstruct alpha.metal -------------------------------------------------
+module purge
+module load ${OPENFOAM_MODULE}
+reconstructPar -fields alpha.metal > log.reconstructPar 2>&1
+
+# --- Load ParaView module and verify pvbatch ---------------------------------
+module load ${PARAVIEW_MODULE}
+if ! command -v pvbatch >/dev/null 2>&1; then
+    echo "ERROR: pvbatch not available after loading ${PARAVIEW_MODULE}" >&2
+    exit 1
+fi
+
 # Melt pool Umax
-${PVBATCH} ${SCRIPTS_DIR}/melt_pool_Umax_at_each_time_step.py \
+pvbatch ${SCRIPTS_DIR}/melt_pool_Umax_at_each_time_step.py \
     > log.pvbatch_Umax 2>&1
 
 # Melt pool height
-${PVBATCH} ${SCRIPTS_DIR}/melt_pool_height_at_each_time_step.py -r \
+pvbatch ${SCRIPTS_DIR}/melt_pool_height_at_each_time_step.py -r \
     > log.pvbatch_height 2>&1
 
-# Melt pool wasMelted depth
-${PVBATCH} ${SCRIPTS_DIR}/melt_pool_wasMelted_depth_at_each_time_step.py -d \
+# Melt pool depth
+pvbatch ${SCRIPTS_DIR}/melt_pool_depth_at_each_time_step.py -d \
     > log.pvbatch_depth 2>&1
 
 echo "Post-processing complete: ${case_dir}"
@@ -168,6 +200,7 @@ EOFPP
     # Submit post-processing job with dependency
     PP_JOB_ID=$(sbatch --dependency=afterok:${SIM_JOB_ID} \
         "${case_dir}/slurm_postprocess.sh" | awk '{print $4}')
+    PP_JOB_IDS+=("$PP_JOB_ID")
     echo "  Submitted ${case_dir} post-processing: Job ID ${PP_JOB_ID} (depends on ${SIM_JOB_ID})"
 
 done
@@ -175,11 +208,11 @@ done
 # ============================================================
 # Submit final analysis job (depends on ALL post-processing)
 # ============================================================
-ALL_SIM_IDS=$(IFS=:; echo "${SIM_JOB_IDS[*]}")
+ALL_PP_IDS=$(IFS=:; echo "${PP_JOB_IDS[*]}")
 
 cat > slurm_analyze.sh << EOFANALYZE
 #!/bin/bash
-#SBATCH --job-name=gc_analyze
+#SBATCH --job-name=SM_gc_analyze
 #SBATCH --partition=amd,intel
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -193,14 +226,16 @@ echo "Running mesh convergence analysis..."
 date
 
 module load python
-python3 mesh_convergence_analysis.py
+ROOT_DIR="${WORK_DIR}" \
+OUTPUT_FILE="${WORK_DIR}/mesh_convergence_results.csv" \
+    python3 ${CASE_DIR}/mesh_convergance_analysis.py
 
 echo "Analysis complete."
 date
 EOFANALYZE
 
 # Build dependency string for all post-processing jobs
-ANALYZE_JOB_ID=$(sbatch --dependency=afterany:${ALL_SIM_IDS} \
+ANALYZE_JOB_ID=$(sbatch --dependency=afterok:${ALL_PP_IDS} \
     slurm_analyze.sh | awk '{print $4}')
 echo ""
 echo "Submitted analysis job: Job ID ${ANALYZE_JOB_ID}"
@@ -211,6 +246,7 @@ echo "All jobs submitted. Summary:"
 echo "============================================"
 echo "Mesh sizes: ${MESH_SIZES[*]} um"
 echo "Simulation Job IDs: ${SIM_JOB_IDS[*]}"
+echo "Post-processing Job IDs: ${PP_JOB_IDS[*]}"
 echo "Analysis Job ID: ${ANALYZE_JOB_ID}"
 echo ""
 echo "Monitor with: squeue -u \$USER"
