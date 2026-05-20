@@ -29,7 +29,8 @@ metal
     nu              8.56e-07;   // Kim: nu = 8.56e-07, mu = 6.42e-3
     rho             7256;       // Kim: at T = 1700
 
-    quasiIncompressible true;
+    quasiIncompressible false;
+    momentumRedistribution true;
 
     rhoSolid        7256;
     betaLiquid      0;
@@ -62,7 +63,7 @@ deltaFunctionModel alphaCSF;
 
 
 beta            beta            [ K^-1 ]          0.0;
-mushyCoeff      mushyCoeff      [ kg/m^3/s ]     5e+3;
+mushyCoeff      mushyCoeff      [ kg/m^3/s ]     5e+8;
 qMushyCoeff     qMushyCoeff                     1e-15;
 
 // ************************************************************************* //
