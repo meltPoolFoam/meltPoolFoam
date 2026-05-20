@@ -43,6 +43,9 @@ processor*
 
 # Simulation directories
 _*
+
+#AI
+**.claude/**
 =======
 # Prerequisites
 *.d

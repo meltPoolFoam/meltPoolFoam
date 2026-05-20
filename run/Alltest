@@ -1,0 +1,97 @@
+#!/bin/bash
+#
+# Smoke test: run every case via its Allrun (serial), but with
+# stopAt=writeNow so the solver writes one cycle and exits. Validates
+# that mesh generation, field setup, and the solver entry point all
+# still work end-to-end without spending real wall time.
+#
+# The complex per-case pipeline scripts (run_*_sbatch.sh,
+# run_*_convergance.sh) are intentionally not exercised here — they
+# submit SLURM jobs and ultimately call the same Allrun anyway.
+#
+# Usage: ./Alltest                     # run all cases
+#        ./Alltest case1 case2 ...     # run a subset
+
+set -u
+
+cd "${0%/*}" || exit 1
+
+CASES=(
+    Stefan1D
+    horizontalSolidification2D
+    verticalSolidification2D
+    singleTrackPrinting
+    singleTrackMeltingReferenceFrame
+    Cunningham2019
+)
+
+if [ $# -gt 0 ]; then
+    CASES=("$@")
+fi
+
+if ! command -v foamDictionary >/dev/null 2>&1; then
+    echo "ERROR: foamDictionary not on PATH — source an OpenFOAM environment first." >&2
+    exit 1
+fi
+
+PASSED=()
+FAILED=()
+
+run_case() {
+    local case_dir="$1"
+    local controlDict="${case_dir}/system/controlDict"
+    local backup="${controlDict}.alltest.bak"
+
+    echo "============================================"
+    echo "[Alltest] ${case_dir}"
+    echo "============================================"
+
+    if [ ! -f "$controlDict" ]; then
+        echo "  SKIP: ${controlDict} not found"
+        FAILED+=("${case_dir} (no controlDict)")
+        return
+    fi
+
+    ( cd "$case_dir" && [ -x ./Allclean ] && ./Allclean ) >/dev/null 2>&1 || true
+
+    cp "$controlDict" "$backup"
+    # restore controlDict on any exit path
+    trap 'mv "$backup" "$controlDict" 2>/dev/null || true' RETURN
+
+    if ! foamDictionary -entry stopAt -set writeNow "$controlDict" >/dev/null; then
+        echo "  ERROR: failed to patch stopAt in ${controlDict}"
+        mv "$backup" "$controlDict"
+        trap - RETURN
+        FAILED+=("${case_dir} (patch failed)")
+        return
+    fi
+
+    local rc=0
+    ( cd "$case_dir" && ./Allrun ) || rc=$?
+
+    mv "$backup" "$controlDict"
+    trap - RETURN
+
+    if [ "$rc" -eq 0 ]; then
+        echo "  PASS: ${case_dir}"
+        PASSED+=("$case_dir")
+    else
+        echo "  FAIL: ${case_dir} (exit ${rc}) — see ${case_dir}/log.*"
+        FAILED+=("${case_dir} (exit ${rc})")
+    fi
+}
+
+for c in "${CASES[@]}"; do
+    run_case "$c"
+done
+
+echo ""
+echo "============================================"
+echo "Alltest summary"
+echo "============================================"
+echo "Passed (${#PASSED[@]}):"
+for c in "${PASSED[@]}"; do echo "  + $c"; done
+echo "Failed (${#FAILED[@]}):"
+for c in "${FAILED[@]}"; do echo "  - $c"; done
+
+[ "${#FAILED[@]}" -eq 0 ]

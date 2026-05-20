@@ -1,0 +1,92 @@
+name: Build and test
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build image, Allwmake, Alltest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.release
+          push: false
+          load: true
+          tags: my_openfoam-plus:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify image was built
+        run: |
+          docker image inspect my_openfoam-plus:latest >/dev/null
+          echo "Image built successfully"
+
+      - name: Allwmake
+        run: |
+          docker run --rm \
+            -u "$(id -u):$(id -g)" \
+            -v "$(pwd):/home/openfoam" \
+            -w /home/openfoam \
+            my_openfoam-plus:latest \
+            bash -c '
+              set +e
+              source /usr/lib/openfoam/openfoam2406/etc/bashrc
+              set -eo pipefail
+              chmod +x ./Allwmake
+              ./Allwmake -j$(nproc) 2>&1 | tee build.log
+              if grep -E "Error|error:" build.log >/dev/null; then
+                echo "::error::Build log contains errors"
+                exit 1
+              fi
+            '
+
+      - name: Alltest
+        run: |
+          docker run --rm \
+            -u "$(id -u):$(id -g)" \
+            -v "$(pwd):/home/openfoam" \
+            -w /home/openfoam \
+            my_openfoam-plus:latest \
+            bash -c '
+              set +e
+              source /usr/lib/openfoam/openfoam2406/etc/bashrc
+              set -eo pipefail
+              ./run/Alltest
+            '
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+          retention-days: 14
+
+      - name: Upload case logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alltest-logs
+          path: |
+            run/**/log.*
+            run/**/slurm_*.out
+          if-no-files-found: ignore
