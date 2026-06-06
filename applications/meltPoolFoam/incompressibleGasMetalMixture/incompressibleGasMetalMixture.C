@@ -71,6 +71,19 @@ Foam::incompressibleGasMetalMixture::incompressibleGasMetalMixture
     quasiIncompressible_(metalDict_.getOrDefault("quasiIncompressible", false)),
     momentumRedistribution_(metalDict_.getOrDefault("momentumRedistribution", false)),
     evaporationConsidered_(metalDict_.getOrDefault("evaporationConsidered", true)),
+    surfTempCorrection_(metalDict_.getOrDefault("surfTempCorrection", false)),
+    Tsurf_
+    (
+    IOobject
+    (
+        "Tsurf",
+        U.mesh().time().timeName(),
+        U.mesh(),
+        IOobject::READ_IF_PRESENT,
+        writeAllFields_ ? IOobject::AUTO_WRITE : IOobject::NO_WRITE
+    ),
+    T()  // initial copy of T
+    ),
     rhoJump_(rho1_.value() - metalDict_.get<scalar>("rhoSolid")),
     initialMass_("initialMass", dimMass, 0),
     tauCorr_("tauCorr",dimTime, metalDict_.get<scalar>("tauCorr")),
@@ -226,6 +239,50 @@ Foam::tmp<Foam::volScalarField> Foam::incompressibleGasMetalMixture::solidPhaseD
         *sqr(alphaM_ - liquidFraction())/(sqr(liquidFraction()) + qMushyCoeff_);
 }
 
+void Foam::incompressibleGasMetalMixture::updateTsurf()
+{
+    if (surfTempCorrection_)
+    {
+        // Look up the volumetric laser source (must exist at this point)
+        const volScalarField& Qvol =
+            phi_.mesh().lookupObject<volScalarField>("laserHeatSource");
+        const volScalarField& kappa = this->kappa();
+
+        // Characteristic length per cell [m]
+	//const volScalarField L("L", pow(phi_.mesh().V(), 1.0/3.0));
+        //tmp<DimensionedField<scalar, volMesh>> tL = pow(phi_.mesh().V(), 1.0/3.0);
+        //const DimensionedField<scalar, volMesh>& L = tL();
+	//const volScalarField L("L", tL());
+	//const volScalarField& L =  pow(phi_.mesh().V(), 1.0/3.0)();
+	//volScalarField L = volScalarField::New("L",phi_.mesh(), dimLength, Zero, calculatedFvPatchScalarField::typeName);
+	//L.primitiveFieldRef() = pow(phi_.mesh().V(), 1.0/3.0);
+	//L.correctBoundaryConditions();
+
+	volScalarField L
+	(
+            IOobject("L", phi_.mesh().time().timeName(), phi_.mesh()),
+	    phi_.mesh(),
+	    dimensionedScalar(dimLength, Zero),          // dimensions + value
+	    calculatedFvPatchScalarField::typeName
+	);
+	L.primitiveFieldRef() = pow(phi_.mesh().V(), 1.0/3.0);
+	L.correctBoundaryConditions();
+
+        // Surface heat flux from volumetric source [W/m²]
+        const volScalarField qSurf = Qvol * L;
+
+        // Small value with correct dimensions to avoid division by zero
+        const dimensionedScalar SMALL_K("smallK", kappa.dimensions(), SMALL);
+
+        // Surface temperature correction (field‑wise)
+        Tsurf_ = T() + alpha1() * qSurf / (kappa + SMALL_K) * (L / 2.0);
+    }
+    else
+    {
+        Tsurf_ = T();
+    }
+    Tsurf_.correctBoundaryConditions();
+}
 
 Foam::tmp<Foam::volScalarField> Foam::incompressibleGasMetalMixture::vapourPressure
 (
@@ -233,12 +290,16 @@ Foam::tmp<Foam::volScalarField> Foam::incompressibleGasMetalMixture::vapourPress
 ) const
 {
     using constant::physicoChemical::R;
-    if (evaporationConsidered_) {
-    return
-        p0*exp(thermo_.metalM()*thermo_.Hvapour()/R
-       *(1/thermo_.Tboiling() - 1/min(T(), Tcritical_)));
-    } else {
-    return 0*p0*T()/Tcritical_;
+    if (evaporationConsidered_)
+    {
+        const volScalarField& Teff = surfTempCorrection_ ? Tsurf_ : T();
+        return
+            p0*exp(thermo_.metalM()*thermo_.Hvapour()/R
+           *(1/thermo_.Tboiling() - 1/min(Teff, Tcritical_)));
+    }
+    else
+    {
+        return 0*p0*T()/Tcritical_;
     }
 }
 
@@ -293,6 +354,7 @@ void Foam::incompressibleGasMetalMixture::correctThermo()
 {
     gasMetalThermalProperties::correctThermo();
     updateRhoM();
+    updateTsurf();
 }
 
 

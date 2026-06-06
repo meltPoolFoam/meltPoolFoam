@@ -90,6 +90,12 @@ class incompressibleGasMetalMixture
             
 	    //- Flag to turn off evaporation effects
             const bool evaporationConsidered_;
+           
+           //- Flag to enable surface temperature correction
+            const bool surfTempCorrection_;
+
+           //- Surface temperature field [K]
+            volScalarField Tsurf_;
 
             //- Melting density change [kg/m^3]
             const scalar rhoJump_;
@@ -126,6 +132,9 @@ class incompressibleGasMetalMixture
 
         //- Update the metal density
         void updateRhoM();
+
+	//- Update surface temperature using laser source and conductivity
+	void updateTsurf();
 
         //- No copy construct
         incompressibleGasMetalMixture(const incompressibleGasMetalMixture&) = delete;
@@ -166,6 +175,12 @@ public:
             tmp<volScalarField> vapourPressure(const dimensionedScalar& p0) const;
 
             tmp<surfaceScalarField> momentumRedistributor(volScalarField& rho) const;
+
+            //- Access surface temperature (returns corrected or bulk T)
+	    const volScalarField& Tsurf() const
+             {
+	      return Tsurf_;
+             }
 
             //- Return the metal density [kg/m^3]
             const volScalarField& rhoM() const

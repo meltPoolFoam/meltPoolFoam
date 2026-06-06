@@ -2,13 +2,14 @@ using constant::mathematical::twoPi;
 using constant::physicoChemical::R;     // universal gas constant
 using constant::physicoChemical::sigma; // Stefan--Boltzmann constant
 
+const volScalarField& Tsurf = mixture.Tsurf();
 radiativeCooling = emissivity*sigma*(pow4(T) - pow4(ambientTemperature));
 evaporativeCooling =
-    evaporationCoeff*mixture.vapourPressure(ambientPressure)*Hvap*Foam::sqrt(molarMass/twoPi/R/T);
+    evaporationCoeff*mixture.vapourPressure(ambientPressure)*Hvap*Foam::sqrt(molarMass/twoPi/R/Tsurf);
 
 const volScalarField& redistribution = mixture.surfaceHeatSourceRedistribution();
 const volScalarField magGradAlphaM = mag(mixture.gradAlphaM());
-const volScalarField evaporativeCoolingPrime = evaporativeCooling*molarMass*Hvap/R/Cp/sqr(T);
+const volScalarField evaporativeCoolingPrime = evaporativeCooling*molarMass*Hvap/R/Cp/sqr(Tsurf);
 
 #include "gradT.H"
 
