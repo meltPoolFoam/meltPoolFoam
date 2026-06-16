@@ -105,5 +105,22 @@ Foam::dimensionedScalar Foam::gasMetalThermo::hAtMeltingPrime() const
     );
 }
 
+bool Foam::gasMetalThermo::equalAlpha(const scalar T, const scalar relTol) const
+{
+    // Liquid metal density with thermal expansion: rho(T) = rhoLiquid / (1 + beta*(T - Tmelting))
+    const scalar rhoLiq = rhoLiquid_/(1.0 + betaLiquid_*(T - Tmelting_));
+
+    // Thermal diffusivity = kappa / (rho * Cp)
+    const scalar alphaLiq = liquid_.kappa.value(T)/(rhoLiq * liquid_.Cp.value(T));
+    const scalar alphaGas = gas_.kappa.value(T)/(rhoGas_  * gas_.Cp.value(T));
+
+    if (mag(alphaLiq) < VSMALL)
+    {
+        return false;
+    }
+
+    return (mag(alphaGas - alphaLiq) / mag(alphaLiq) < relTol);
+}
+
 
 // ************************************************************************* //

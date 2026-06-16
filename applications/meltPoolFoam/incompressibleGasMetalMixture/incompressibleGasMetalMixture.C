@@ -116,6 +116,14 @@ Foam::incompressibleGasMetalMixture::incompressibleGasMetalMixture
             << "Thermal expansion coefficient betta = " << beta
             << exit(FatalError);
     }
+    
+    if (!thermo().equalAlpha(Tmelting + 1000) && surfTempCorrection_)
+    {
+        FatalErrorInFunction
+            << "Gas and liquid metal thermal diffusivities differ at T = " << Tmelting + 1000 
+	    << " , but correction is turned on"
+            << exit(FatalError);
+    }
 
     Info<< " -- Liquid metal density at " << Tmelting + 1000 << " = "
         << rhoM(Tmelting, Tmelting + 1000, 1) << endl
@@ -275,7 +283,7 @@ void Foam::incompressibleGasMetalMixture::updateTsurf()
         const dimensionedScalar SMALL_K("smallK", kappa.dimensions(), SMALL);
 
         // Surface temperature correction (field‑wise)
-        Tsurf_ = T() + alpha1() * qSurf / (kappa + SMALL_K) * (L / 2.0);
+        Tsurf_ = T() + (sqr(alpha1()) + sqr(1 - alpha1()))*alpha1() * qSurf / (kappa + SMALL_K) * (L / 2.0);
     }
     else
     {

@@ -205,6 +205,9 @@ public:
             {
                 return dimensionedScalar(" betaLiquid", dimMass/(dimTemperature*dimMass), betaLiquid_);
             }
+	    
+	    //- Return true if gas and liquid thermal diffusivities are equal at T
+            bool equalAlpha(const scalar T, const scalar relTol = 1e-6) const;
 
 
         // Evaluation
