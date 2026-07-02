@@ -251,21 +251,21 @@ void Foam::incompressibleGasMetalMixture::updateTsurf()
 {
     if (surfTempCorrection_)
     {
+        using constant::mathematical::twoPi;
+        using constant::physicoChemical::R;
+
         // Look up the volumetric laser source (must exist at this point)
         const volScalarField& Qvol =
             phi_.mesh().lookupObject<volScalarField>("laserHeatSource");
         const volScalarField& kappa = this->kappa();
 
-        // Characteristic length per cell [m]
-	//const volScalarField L("L", pow(phi_.mesh().V(), 1.0/3.0));
-        //tmp<DimensionedField<scalar, volMesh>> tL = pow(phi_.mesh().V(), 1.0/3.0);
-        //const DimensionedField<scalar, volMesh>& L = tL();
-	//const volScalarField L("L", tL());
-	//const volScalarField& L =  pow(phi_.mesh().V(), 1.0/3.0)();
-	//volScalarField L = volScalarField::New("L",phi_.mesh(), dimLength, Zero, calculatedFvPatchScalarField::typeName);
-	//L.primitiveFieldRef() = pow(phi_.mesh().V(), 1.0/3.0);
-	//L.correctBoundaryConditions();
+        // Evaporation parameters (must exist at this point)
+        const IOdictionary& problemProperties =
+            phi_.mesh().lookupObject<IOdictionary>("problemProperties");
+        const dimensionedScalar ambientPressure("ambientPressure", problemProperties);
+        const scalar evaporationCoeff(problemProperties.get<scalar>("evaporationCoeff"));
 
+        // Characteristic length per cell [m]
 	volScalarField L
 	(
             IOobject("L", phi_.mesh().time().timeName(), phi_.mesh()),
@@ -279,11 +279,20 @@ void Foam::incompressibleGasMetalMixture::updateTsurf()
         // Surface heat flux from volumetric source [W/m²]
         const volScalarField qSurf = Qvol * L;
 
+        // Evaporative heat flux [W/m²], evaluated with Tsurf_ from the previous update
+        // (same formula as evaporativeCooling in hEqn.H)
+        const volScalarField qEvap =
+            evaporationCoeff*vapourPressure(ambientPressure)
+           *thermo_.Hvapour()*sqrt(thermo_.metalM()/twoPi/R/Tsurf_);
+
         // Small value with correct dimensions to avoid division by zero
         const dimensionedScalar SMALL_K("smallK", kappa.dimensions(), SMALL);
 
-        // Surface temperature correction (field‑wise)
-        Tsurf_ = T() + (sqr(alpha1()) + sqr(1 - alpha1()))*alpha1() * qSurf / (kappa + SMALL_K) * (L / 2.0);
+        // Surface temperature correction (field‑wise), active only where the laser heats
+        Tsurf_ =
+            T()
+          + pos(Qvol)*(sqr(alpha1()) + sqr(1 - alpha1()))*alpha1()
+           *(qSurf - qEvap)/(kappa + SMALL_K)*(L/2.0);
     }
     else
     {
