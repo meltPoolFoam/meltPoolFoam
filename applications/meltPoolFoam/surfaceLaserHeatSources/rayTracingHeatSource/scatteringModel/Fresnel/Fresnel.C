@@ -48,11 +48,39 @@ Foam::scattering::Fresnel::Fresnel(const dictionary& dict)
 :
     scatteringModel(dict),
     n_(dict.get<scalar>("n")),
-    k_(dict.get<scalar>("k"))
+    k_(dict.get<scalar>("k")),
+    calibrationFactor_(dict.getOrDefault<scalar>("calibrationFactor", 1))
 {
     using constant::mathematical::pi;
 
-    Info<< " -- Normal absorptivity = " << 1 - R(1) << endl;
+    if (calibrationFactor_ <= 0)
+    {
+        FatalIOErrorInFunction(dict)
+            << "calibrationFactor = " << calibrationFactor_
+            << " must be positive"
+            << exit(FatalIOError);
+    }
+
+    // The absorptivity peaks at an intermediate incidence angle,
+    // therefore scan the whole range to detect a nonphysical calibration
+    scalar maxAbsorptivity = 0;
+    for (label i = 0; i < 90; ++i)
+    {
+        maxAbsorptivity = max(maxAbsorptivity, 1 - R(cos(i*pi/180)));
+    }
+
+    if (maxAbsorptivity > 1)
+    {
+        FatalIOErrorInFunction(dict)
+            << "calibrationFactor = " << calibrationFactor_
+            << " is too high: the absorptivity exceeds unity." << nl
+            << "The maximum admissible value is "
+            << calibrationFactor_/maxAbsorptivity
+            << exit(FatalIOError);
+    }
+
+    Info<< " -- Calibration factor = " << calibrationFactor_ << nl
+        << " -- Normal absorptivity = " << 1 - R(1) << endl;
     DebugInfo
         << " -- Absorptivity (pi/6) = " << 1 - R(cos(pi/6)) << nl
         << " -- Absorptivity (pi/3) = " << 1 - R(cos(pi/3)) << nl
@@ -99,7 +127,9 @@ Foam::scalar Foam::scattering::Fresnel::R(scalar cosTheta) const
     scalar RN = (sqr(p - cosTheta) + sqrQ)/(sqr(p + cosTheta) + sqrQ);
     scalar RP = RN*(sqr(p - sinTheta*tanTheta) + sqrQ)/(sqr(p + sinTheta*tanTheta) + sqrQ);
 
-    return (RP + RN)/2;
+    // Scale the absorptivity by the calibration factor and adjust
+    // the reflectivity complementarily to preserve the energy balance
+    return 1 - calibrationFactor_*(1 - (RP + RN)/2);
 }
 
 

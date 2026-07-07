@@ -65,6 +65,9 @@ class Fresnel
         //- Absorptive index of metal
         const scalar k_;
 
+        //- Calibration factor scaling the absorptivity (default = 1)
+        const scalar calibrationFactor_;
+
 public:
 
     //- Runtime type information
