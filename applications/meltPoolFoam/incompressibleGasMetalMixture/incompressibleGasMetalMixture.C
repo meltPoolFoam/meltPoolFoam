@@ -33,6 +33,7 @@ License
 
 #include "generateGeometricField.H"
 #include "updateGeometricField.H"
+#include "geometricUniformField.H"
 
 #include "fvcSmooth.H"
 #include "surfaceForces.H"
@@ -249,55 +250,125 @@ Foam::tmp<Foam::volScalarField> Foam::incompressibleGasMetalMixture::solidPhaseD
 
 void Foam::incompressibleGasMetalMixture::updateTsurf()
 {
-    if (surfTempCorrection_)
+    // Field-based sub-cell reconstruction of the surface temperature.
+    //
+    // Every laser-heated cell of the interface band recovers the surface
+    // temperature from its cell average by inverting the sub-cell energy
+    // balance (notes.tex, eq. Ts_implicit, per-cell form)
+    //
+    //     Ts = T + d/kappaM*(qLoc - qEvap(Ts)),
+    //
+    // where
+    //   w    = the cell's dimensionless share of the band deposit,
+    //          Qvol*L = w*qLoc: alpha in the interface cell (the geometric
+    //          split of rayTracing), R*|grad(alphaM)|*L ~ 1 - alpha_int in
+    //          the full-metal cell below it;
+    //   qLoc = Qvol*L/w is the full locally absorbed flux;
+    //   d    = distance from the surface to the centre of the cell's metal
+    //          part: alpha*L/2 in the interface cell, (3/2 - w)*L below it.
+    //
+    // qEvap is exponential in Ts, so the implicit equation is solved by
+    // Newton, performed on whole fields at once; f' = 1 + C*dqEvap/dT >= 1
+    // makes the iteration monotone from Ts = max(previous Tsurf, T).
+
+    if (!surfTempCorrection_)
     {
-        using constant::mathematical::twoPi;
-        using constant::physicoChemical::R;
+        Tsurf_ = T();
+        Tsurf_.correctBoundaryConditions();
+        return;
+    }
 
-        // Look up the volumetric laser source (must exist at this point)
-        const volScalarField& Qvol =
-            phi_.mesh().lookupObject<volScalarField>("laserHeatSource");
-        const volScalarField& kappa = this->kappa();
+    using constant::mathematical::twoPi;
+    using constant::physicoChemical::R;
 
-        // Evaporation parameters (must exist at this point)
-        const IOdictionary& problemProperties =
-            phi_.mesh().lookupObject<IOdictionary>("problemProperties");
-        const dimensionedScalar ambientPressure("ambientPressure", problemProperties);
-        const scalar evaporationCoeff(problemProperties.get<scalar>("evaporationCoeff"));
+    const fvMesh& mesh = phi_.mesh();
 
-        // Characteristic length per cell [m]
-	volScalarField L
-	(
-            IOobject("L", phi_.mesh().time().timeName(), phi_.mesh()),
-	    phi_.mesh(),
-	    dimensionedScalar(dimLength, Zero),          // dimensions + value
-	    calculatedFvPatchScalarField::typeName
-	);
-	L.primitiveFieldRef() = pow(phi_.mesh().V(), 1.0/3.0);
-	L.correctBoundaryConditions();
+    // Volumetric laser source and evaporation parameters (must exist)
+    const volScalarField& Qvol =
+        mesh.lookupObject<volScalarField>("laserHeatSource");
+    const IOdictionary& problemProperties =
+        mesh.lookupObject<IOdictionary>("problemProperties");
+    const dimensionedScalar ambientPressure("ambientPressure", problemProperties);
+    const scalar evaporationCoeff(problemProperties.get<scalar>("evaporationCoeff"));
 
-        // Surface heat flux from volumetric source [W/m²]
-        const volScalarField qSurf = Qvol * L;
+    // Scalar coefficients of qEvap(Ts) = qEvapCoeff*pVap(Ts)/sqrt(Ts)
+    // (the flux formula matches evaporativeCooling in hEqn.H)
+    const scalar p0 = ambientPressure.value();
+    const scalar M = thermo_.metalM().value();
+    const scalar Hvap = thermo_.Hvapour().value();
+    const scalar Tboil = thermo_.Tboiling().value();
+    const scalar Tcrit = Tcritical_.value();
+    const scalar MHvapByR = M*Hvap/R.value();
+    const scalar qEvapCoeff = evaporationCoeff*Hvap*sqrt(M/(twoPi*R.value()));
 
-        // Evaporative heat flux [W/m²], evaluated with Tsurf_ from the previous update
-        // (same formula as evaporativeCooling in hEqn.H)
-        const volScalarField qEvap =
-            evaporationCoeff*vapourPressure(ambientPressure)
-           *thermo_.Hvapour()*sqrt(thermo_.metalM()/twoPi/R/Tsurf_);
+    // Cell-level fields of the reconstruction
+    const volScalarField kappaMField
+    (
+        thermo_.kappa(T(), liquidFraction(), geometricUniformField<scalar>(0))
+    );
+    const scalarField& kappaM = kappaMField.primitiveField();
+    const scalarField& alpha = alpha1().primitiveField();
+    const scalarField& Q = Qvol.primitiveField();
+    const scalarField& Tcell = T().primitiveField();
 
-        // Small value with correct dimensions to avoid division by zero
-        const dimensionedScalar SMALL_K("smallK", kappa.dimensions(), SMALL);
+    const scalar alphaTol = 1e-6;
+    const scalarField L(cbrt(mesh.V().field()));
 
-        // Surface temperature correction (field‑wise), active only where the laser heats
-        Tsurf_ =
-            T()
-          + pos(Qvol)*(sqr(alpha1()) + sqr(1 - alpha1()))*alpha1()
-           *(qSurf - qEvap)/(kappa + SMALL_K)*(L/2.0);
+    // 1 in the cells containing the surface, 0 in the full-metal cells
+    const scalarField isInterface(pos(1 - alphaTol - alpha));
+
+    // Share of the band deposit carried by the cell, w, such that
+    // Qvol*L = w*qLoc.  The cell containing the surface absorbs its own
+    // metal fraction alpha of the local flux (exactly how rayTracing
+    // splits the deposit; gradAlpha agrees to O(rhoCpGas/rhoCpMetal)).
+    // The full-metal cell below carries the remainder 1 - alpha_int of the
+    // interface cell above it, which is not known locally and is estimated
+    // by the hEqn.H band weight R*|grad(alphaM)|*L of the cell itself.
+    const scalarField wBelow
+    (
+        surfaceHeatSourceRedistribution().primitiveField()
+       *mag(gradAlphaM())().primitiveField()*L
+    );
+    const scalarField w
+    (
+        min(max(isInterface*alpha + (1 - isInterface)*wBelow, alphaTol), 1.0)
+    );
+
+    const scalarField d((isInterface*0.5*alpha + (1 - isInterface)*(1.5 - w))*L);
+    const scalarField qLoc(Q*L/w);
+    const scalarField C(d/max(kappaM, SMALL));
+
+    // Newton iterations on the whole field (2-3 suffice; f' >= 1)
+    scalarField Ts;
+
+    if (evaporationConsidered_)
+    {
+        Ts = max(Tsurf_.primitiveField(), Tcell);
+
+        for (label iter = 0; iter < 10; ++iter)
+        {
+            const scalarField pVap
+            (
+                p0*exp(MHvapByR*(1/Tboil - 1/min(Ts, Tcrit)))
+            );
+            const scalarField qEvap(qEvapCoeff*pVap/sqrt(Ts));
+            const scalarField dqEvapdT
+            (
+                qEvap*(pos(Tcrit - Ts)*MHvapByR/sqr(Ts) - 0.5/Ts)
+            );
+
+            Ts -= (Ts - Tcell - C*(qLoc - qEvap))/(1 + C*dqEvapdT);
+        }
     }
     else
     {
-        Tsurf_ = T();
+        Ts = Tcell + C*qLoc;    // the balance is linear without evaporation
     }
+
+    // Apply in the laser-heated band only, excluding (almost) pure gas cells
+    const scalarField heated(pos(Q)*pos(alpha - alphaTol));
+
+    Tsurf_.primitiveFieldRef() = heated*Ts + (1 - heated)*Tcell;
     Tsurf_.correctBoundaryConditions();
 }
 
