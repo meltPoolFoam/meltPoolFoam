@@ -1,0 +1,29 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  dev                                   |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      inclinedPlaneProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// -- Preferred input: angle to the xy-plane and a reference point -----------
+angle   0;          // [deg] inclination from horizontal (xy-plane)
+point   (0 50e-6 0e-6);  // [m] any point on the plane (default (0 0 0))
+
+// -- Alternative 1: explicit point and unit normal --------------------------
+// point   (0 0 1e-6);
+// normal  (0 -0.5 0.8660254);   // must be unit length
+
+// -- Alternative 2: four coefficients a,b,c,d of the plane equation ---------
+// planeEquation (0  -0.5  0.8660254  -8.660254e-7);   // a*x + b*y + c*z + d = 0
+
+// ************************************************************************* //

@@ -1,0 +1,128 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  dev                                   |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvSolution;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+solvers
+{
+    "alpha.metal.*"
+    {
+        reconstructionScheme plicRDF;
+
+        isoFaceTol      1e-10;  // tolerance for the cut-cell algorithm (influence on mass conservation)
+        surfCellTol     1e-6;   // tolerance to determine an interface cell
+        nAlphaBounds    3;      // number of conservative corrections before clipping and snapping
+        snapTol         1e-10;  // for snapping: alpha < snapTol --> 0, 1 - alpha < snapTol --> 1
+        clip            true;
+
+        writeFields     false;
+        writeSurfCells  false;
+        writeIsoFaces   false;
+
+        nAlphaSubCycles 1;
+        cAlpha          1;      // NB: cAlpha is not used by isoAdvector but must be present
+    }
+
+    p_rgh
+    {
+        solver          GAMG;
+        smoother        DIC;
+        cacheAgglomeration no;
+        tolerance       1e-6;
+        relTol          0.01;
+    }
+
+    p_rghFinal
+    {
+        $p_rgh;
+        relTol          1e-3;
+    }
+
+    "pcorr.*"
+    {
+        solver          PCG;
+        preconditioner
+        {
+            preconditioner  GAMG;
+            tolerance       1e-6;
+            relTol          0;
+            smoother        DICGaussSeidel;
+            cacheAgglomeration no;
+        }
+
+        tolerance       1e-9;   // NB: should be quite small for some rare events
+        relTol          1e-3;
+        maxIter         20;
+    }
+
+    "U.*"
+    {
+        solver          smoothSolver;
+        smoother        GaussSeidel;
+        tolerance       1e-7;
+        relTol          0;
+    }
+
+    "(k|epsilon).*"
+    {
+        solver          PBiCGStab;
+        preconditioner  DILU;
+        tolerance       1e-8;
+        relTol          0;
+    }
+
+    "h.*"
+    {
+        solver          GAMG;
+        smoother        GaussSeidel;
+        tolerance       1e-8;
+        relTol          0.001;
+    }
+
+    hcorr
+    {
+        tolerance       1e-17;
+    }
+}
+
+PIMPLE
+{
+    momentumPredictor   no;
+    nOuterCorrectors    5; // for all variables
+    nCorrectors         1; // for pressure
+    nEnthalpyCorrectors 3;
+    nNonOrthogonalCorrectors 1;
+    correctPhi          yes;
+
+    residualControl
+    {
+        "(h|p_rgh)"
+        {
+            tolerance   1e-3;
+            relTol      0;
+        }
+    }
+}
+
+relaxationFactors
+{
+    equations
+    {
+        ".*" 1;
+    }
+}
+
+
+// ************************************************************************* //

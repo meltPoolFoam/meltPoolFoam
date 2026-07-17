@@ -1,0 +1,32 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  dev                                   |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      powderBedProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+ballRadius          [ m ]   2e-5;
+sigmaRadius         [ m ]   0.2e-5;
+substratePosition   [ m ]   0;
+
+seed                123;
+amplitudePosition   0.7;
+latticeStep         2.1;
+boxMin              ( -125e-6  -125e-6  0 );
+boxMax              ( 475e-6   125e-6  0 );
+
+nLayers             1;                     // Number of powder layers (1 = single layer)
+layerSpacing        2e-6;                   // [m] Additional Z-spacing between layers (0 = close-packed)
+
+
+// ************************************************************************* //
