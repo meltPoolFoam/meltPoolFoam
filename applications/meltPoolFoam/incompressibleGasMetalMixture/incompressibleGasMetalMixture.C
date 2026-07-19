@@ -312,6 +312,9 @@ void Foam::incompressibleGasMetalMixture::updateTsurf()
     const scalarField& Tcell = T().primitiveField();
 
     const scalar alphaTol = 1e-6;
+
+    // NB: cbrt(V) is the cell size across the interface only for
+    // near-isotropic cells -- keep the interface band uniformly refined
     const scalarField L(cbrt(mesh.V().field()));
 
     // 1 in the cells containing the surface, 0 in the full-metal cells
