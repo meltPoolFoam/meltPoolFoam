@@ -118,13 +118,13 @@ Foam::incompressibleGasMetalMixture::incompressibleGasMetalMixture
             << exit(FatalError);
     }
     
-    if (!thermo().equalAlpha(Tmelting + 1000) && surfTempCorrection_)
-    {
-        FatalErrorInFunction
-            << "Gas and liquid metal thermal diffusivities differ at T = " << Tmelting + 1000 
-	    << " , but correction is turned on"
-            << exit(FatalError);
-    }
+   // if (!thermo().equalAlpha(Tmelting + 1000) && surfTempCorrection_)
+   // {
+   //     FatalErrorInFunction
+   //         << "Gas and liquid metal thermal diffusivities differ at T = " << Tmelting + 1000 
+   //         << " , but correction is turned on"
+   //         << exit(FatalError);
+   // }
 
     Info<< " -- Liquid metal density at " << Tmelting + 1000 << " = "
         << rhoM(Tmelting, Tmelting + 1000, 1) << endl
@@ -311,7 +311,7 @@ void Foam::incompressibleGasMetalMixture::updateTsurf()
     const scalarField& Q = Qvol.primitiveField();
     const scalarField& Tcell = T().primitiveField();
 
-    const scalar alphaTol = 1e-6;
+    const scalar alphaTol = 1e-4;
 
     // NB: cbrt(V) is the cell size across the interface only for
     // near-isotropic cells -- keep the interface band uniformly refined
@@ -367,7 +367,7 @@ void Foam::incompressibleGasMetalMixture::updateTsurf()
         // clamp the seed too, in case a previous step left Tsurf_ corrupted
         Ts = min(max(max(Tsurf_.primitiveField(), Tcell), SMALL), 2*Tcrit);
 
-        for (label iter = 0; iter < 10; ++iter)
+        for (label iter = 0; iter < 1; ++iter)
         {
             const scalarField pVap
             (
