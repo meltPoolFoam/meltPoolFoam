@@ -332,6 +332,21 @@ void Foam::incompressibleGasMetalMixture::updateTsurf()
         surfaceHeatSourceRedistribution().primitiveField()
        *mag(gradAlphaM())().primitiveField()*L
     );
+
+    // Unlike alpha in the interface cell (which Qvol is deposited exactly
+    // proportional to, so it cancels out of qLoc regardless of magnitude),
+    // wBelow is a *local estimate* uncorrelated with the cell's own Qvol.
+    // On curved/under-resolved interfaces (unlike the flat quasi1D
+    // benchmark) a ray can deposit into a cell where this estimate
+    // collapses near the alphaTol floor while Qvol stays finite, blowing
+    // up qLoc = Qvol*L/w by orders of magnitude and sending the Newton
+    // iterate to a non-physical Ts.  Gate the correction off for cells
+    // where the estimate is not physically resolved instead of dividing
+    // by noise; a genuine band cell has wBelow = O(0.1-1) (Stage 3 sweeps,
+    // including the face-aligned alpha = 1 case, all sit >= 0.5).
+    const scalar wBelowMin = 1e-2;
+    const scalarField belowReliable(pos(wBelow - wBelowMin));
+
     const scalarField w
     (
         min(max(isInterface*alpha + (1 - isInterface)*wBelow, alphaTol), 1.0)
@@ -339,14 +354,18 @@ void Foam::incompressibleGasMetalMixture::updateTsurf()
 
     const scalarField d((isInterface*0.5*alpha + (1 - isInterface)*(1.5 - w))*L);
     const scalarField qLoc(Q*L/w);
-    const scalarField C(d/max(kappaM, SMALL));
+    const scalarField C
+    (
+        (isInterface + (1 - isInterface)*belowReliable)*d/max(kappaM, SMALL)
+    );
 
     // Newton iterations on the whole field (2-3 suffice; f' >= 1)
     scalarField Ts;
 
     if (evaporationConsidered_)
     {
-        Ts = max(Tsurf_.primitiveField(), Tcell);
+        // clamp the seed too, in case a previous step left Tsurf_ corrupted
+        Ts = min(max(max(Tsurf_.primitiveField(), Tcell), SMALL), 2*Tcrit);
 
         for (label iter = 0; iter < 10; ++iter)
         {
@@ -361,6 +380,13 @@ void Foam::incompressibleGasMetalMixture::updateTsurf()
             );
 
             Ts -= (Ts - Tcell - C*(qLoc - qEvap))/(1 + C*dqEvapdT);
+
+            // Defensive clamp: sqrt()/exp() above require Ts > 0, and the
+            // Newton convexity proof (notes.tex) only holds below ~2e4 K;
+            // a still-pathological C*qLoc (or any other edge case) must
+            // not be allowed to push Ts outside that range and crash the
+            // sqrt() on the next sweep.
+            Ts = min(max(Ts, SMALL), 2*Tcrit);
         }
     }
     else
