@@ -37,7 +37,7 @@ To build solver run
 | `horizontalSolidification2D` | 2D horizontal solidification shrinkage [[Panov et al., 2025]](https://doi.org/10.1063/5.0292764)|
 | `verticalSolidification2D` | 2D vertical solidification shrinkage [[Panov et al., 2025]](https://doi.org/10.1063/5.0292764)|
 | `singleTrackPrinting` | 3D laser scan over a powder bed with adaptive moving frame and mesh refinement |
-| `singleTrackMeltingReferenceFrame` | 3D laser scan in the thermo-capillary regime, moving reference frame |
+| `singleTrackMeltingReferenceFrame` | 3D laser scan in the thermo-capillary regime, moving reference frame [[Panov et al., 2026]](https://doi.org/10.1016/j.jmatprotec.2026.119446)|
 | `Cunningham2019` | 3D keyhole melt-pool reference case  [[Cunningham et al., 2019]](https://www.science.org/doi/10.1126/science.aav4687)|
 
 Each case has its own `Allrun` / `Allclean`. To run one:
@@ -71,6 +71,8 @@ Then clone the repo into the mounted volume.
 If you use meltPoolFoam in academic work, cite:
 
 > D. V. Panov, O. A. Rogozin, O. V. Vasilyev, "The influence of volumetric shrinkage on the metal solidification process under localized energy deposition", *Physics of Fluids* **37** (10) (Oct. 2025). [doi:10.1063/5.0292764](https://doi.org/10.1063/5.0292764)
+
+> D. V. Panov, O. A. Rogozin, O. V. Vasilyev, "A data assimilation framework for modeling melt-pool dynamics in laser melting of steels with varying sulfur content", *Journal of Materials Processing Technology* **356** (2026) 119446. [doi:10.1016/j.jmatprotec.2026.119446](https://doi.org/10.1016/j.jmatprotec.2026.119446)
 
 ## License
 
